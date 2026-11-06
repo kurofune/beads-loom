@@ -205,19 +205,27 @@ func TestDoltStatusWithRemote(t *testing.T) {
 		name, *st.Remote, st.Branch, *st.Ahead, *st.Behind, st.Dirty)
 }
 
-// openSiblingWithRemote finds a beads workspace other than this repo that has a
-// running dolt server and at least one configured remote.
+// siblingEnv names the path list of beads workspaces TestDoltStatusWithRemote
+// may borrow. Which workspaces have a Dolt remote is a fact about one machine,
+// so the test reads it from the environment instead of hardcoding a path.
+const siblingEnv = "LOOM_LIVE_SIBLING"
+
+// openSiblingWithRemote finds a beads workspace other than this repo, named in
+// LOOM_LIVE_SIBLING, that has a running dolt server and at least one configured
+// remote.
 func openSiblingWithRemote(t *testing.T) (*sql.DB, string) {
 	t.Helper()
 
-	home, err := os.UserHomeDir()
-	if err != nil {
-		t.Skip("no home directory")
+	var candidates []string
+	for _, workdir := range filepath.SplitList(os.Getenv(siblingEnv)) {
+		if workdir != "" {
+			candidates = append(candidates, workdir)
+		}
 	}
-	// The real projects on this machine, per ARCHITECTURE.md.
-	candidates := []string{
-		filepath.Join(home, "Projects", "djinn"),
-		filepath.Join(home, "Projects", "GameIdeas", "Project-Pheonix"),
+	if len(candidates) == 0 {
+		t.Skipf("%s is unset: set it to a beads workspace with a dolt remote "+
+			"(paths separated by %q) and start its server with `bd dolt start -C <workdir>`",
+			siblingEnv, string(os.PathListSeparator))
 	}
 
 	for _, workdir := range candidates {
@@ -243,7 +251,8 @@ func openSiblingWithRemote(t *testing.T) (*sql.DB, string) {
 		return db, filepath.Base(workdir)
 	}
 
-	t.Skip("no sibling beads workspace with a dolt remote and a running server")
+	t.Skipf("no workspace in %s=%q has a running server and a dolt remote; "+
+		"start one with `bd dolt start -C <workdir>`", siblingEnv, os.Getenv(siblingEnv))
 	return nil, ""
 }
 
