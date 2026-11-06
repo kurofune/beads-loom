@@ -45,6 +45,11 @@ Before any start, run `djinn drain alive` and refuse on `alive` or `unknown`
 - `--max-beads <n>` is the batch size — how many beads this drain takes
   (default 5).
 - No spending cap unless the operator asked for one.
+- Once the Claude week reaches `pause_at_percent` (`workshop.claude_window`,
+  default 85) with more than `unless_reset_within` (default 24h) to its reset,
+  the tick starts no drain and only the kept duties run (`keep_duties`, default
+  the lead's rule, digest and inbox); a running drain starts no new bead while
+  its running ones finish. `djinn workshop spend` overrides it through the reset.
 
 ```say
 Starting the drain now: at most <max-beads> beads, <max-retries> retries per
