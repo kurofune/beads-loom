@@ -16,7 +16,7 @@ cd "$(git rev-parse --show-toplevel)"
 
 allow=scripts/check-public.allow
 users_re='/Users''/[^/]+/'
-names_re='nathan''gross|outcast''games'
+names_re='nathan''gross|outcast''games|game''ideas|project[-_]phe''onix'
 scope=(-- . ':!.beads' ':!.djinn/seats')
 
 tmp=$(mktemp)
