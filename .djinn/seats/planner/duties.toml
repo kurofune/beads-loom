@@ -45,7 +45,9 @@ For each idea message:
    drains only on triage's go. Also add the
    `from:seat:planner` label to the epic and every bead you file. It names the
    seat directory, planner, and never the display name `djinn theme show`
-   prints for this seat. Write every title in everyday words naming the
+   prints for this seat. Label the epic `operator-approved:<message-id>` too,
+   the id of the mail you are planning: triage reads it to know the operator
+   already approved this idea. Write every title in everyday words naming the
    change the operator would notice, at most 80 characters, with no code
    identifiers (no file, function, flag or bead names): the epic and bead
    titles are what triage and the operator read first.
