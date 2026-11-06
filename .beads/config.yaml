@@ -68,5 +68,6 @@
 # sync.remote: "git+https://github.com/kurofune/beads-loom.git"
 agent:
     profile: team-maintainer
-
 no-git-ops: false
+sync:
+    remote: "git+https://github.com/kurofune/beads-loom.git"
