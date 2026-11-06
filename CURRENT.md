@@ -4,14 +4,14 @@
 **Goal:** make Loom work for any beads user before the repo goes public: a new
 `bd init` workspace reads, writes and closes, and no djinn UI shows unless the
 djinn integration is on.
-**Last change:** `kurofune/beads-loom` is public: one clean commit (1983c4b, GitHub noreply author) plus the Dolt backlog; this checkout tracks it, old history on `legacy/main`.
+**Last change:** `kurofune/beads-loom` is public (1983c4b, noreply author) with the Dolt backlog; first CI green; `kurofune/loom` archived; old history on `legacy/main`.
 
 ## State
 
 - Epics closed: Foundations (loom-3ft), Board (loom-yqh), Tracker Truth
   (loom-d1q), Initiatives (loom-g1v).
 - Readiness (loom-iqo): every child closed. `scripts/check-public.sh` runs in `make check`; gitleaks does not (only `.gitleaks.toml` exists; run it by hand).
-- First public CI run (42178431854) in progress; CI runs Node 24 (vitest 5 and jsdom 30 need 22.22.2+, 24.15+ or 26+).
+- Public CI green from the first run (42178431854); CI runs Node 24 (vitest 5 and jsdom 30 need 22.22.2+, 24.15+ or 26+).
 - Epic deferred: Runs (loom-0zj). Its external gate is gone; its work goes
   inside the djinn integration, whose backend seam now exists. loom-0zj.3 is live again.
 - Graph: closed. Open spin-off: loom-pks (Initiatives chained count, P4).
@@ -35,11 +35,10 @@ djinn integration is on.
 
 ## Next checkpoint
 
-First public CI run green, then archive `kurofune/loom`. Red: fix on beads-loom first, archive after.
+Launch done. Next: the 33 P3 `review-follow-up` beads, or gitleaks in `make check` and CI (not filed).
 
 ## Stop conditions
 
-- Archive `kurofune/loom` only after a green CI run on beads-loom.
 - The graph draws blocking only. Re-adding a whole-project canvas needs a new
   ruling, not a patch — DECISIONS.md 2026-08-16.
 - A live test that FAILs against a reachable database is a fixture finding.
