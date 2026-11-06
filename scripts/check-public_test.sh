@@ -84,6 +84,22 @@ printf 'line one\nby nathan''gross\n' >"$repo/quote\"doc.md"
 run_case "file with a quote in its name fails" 1 'quote"doc.md:2:'
 
 new_repo
+printf 'line one\nname: Project-Phe''onix\n' >"$repo/fixture.ts"
+run_case "private project name fails" 1 "fixture.ts:2:"
+
+new_repo
+printf 'db: Project_Phe''onix\n' >"$repo/fixture.ts"
+run_case "private project db spelling fails" 1 "fixture.ts:1:"
+
+new_repo
+printf 'path ~/Projects/Game''Ideas/x\n' >"$repo/doc.md"
+run_case "private project folder fails" 1 "doc.md:1:"
+
+new_repo
+printf "name: 'game', workdir: '~/code/game'\n" >"$repo/fixture.ts"
+run_case "generic game stand-in passes" 0 ""
+
+new_repo
 printf 'see /Users''/x/secret\n' >"$repo/café.md"
 printf 'café.md:/x/secret\n' >"$repo/scripts/check-public.allow"
 run_case "allowlisted hit in a non-ASCII name passes" 0 ""
