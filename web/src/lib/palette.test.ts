@@ -131,7 +131,7 @@ const issue = (id: string, title: string, over: Partial<Issue> = {}): Issue =>
   }) as Issue
 
 const ctx = (over: Partial<PaletteContext> = {}): PaletteContext => ({
-  projects: [project('loom'), project('djinn'), project('Project-Pheonix')],
+  projects: [project('loom'), project('djinn'), project('game')],
   currentProject: 'loom',
   currentView: 'backlog',
   goProject: vi.fn(),
@@ -158,7 +158,7 @@ describe('buildActions', () => {
     const names = buildActions(ctx())
       .filter((a) => a.group === 'Projects')
       .map((a) => a.label)
-    expect(names).toEqual(['djinn', 'Project-Pheonix'])
+    expect(names).toEqual(['djinn', 'game'])
   })
 
   it('marks an unreachable project instead of hiding it', () => {

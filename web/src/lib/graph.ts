@@ -7,7 +7,7 @@ import type { GraphEdge, GraphNode, GraphResponse } from '@/api/types'
  *
  * The view used to lay every issue out on one canvas with a Sugiyama layout, and
  * it was unreadable for a measurable reason rather than a matter of taste. On
- * Project-Pheonix, 166 of 225 edges are `parent-child` and only 43 of 207 issues
+ * a 207-issue game backlog, 166 of 225 edges are `parent-child` and only 43 of 207 issues
  * touch a `blocks` edge — so the layered DAG was spending all its effort drawing
  * a tree, and one epic with 67 children became a single row 15,408 px wide. The
  * other 79% of nodes were on the canvas only because they belong to an epic,
@@ -231,7 +231,7 @@ export function epicIndex(data: GraphResponse): Map<string, string | null> {
 /**
  * Whether an edge spans two epics.
  *
- * The distinction earns its own rendering: on Project-Pheonix 27 of 38 `blocks`
+ * The distinction earns its own rendering: on a 207-issue game backlog 27 of 38 `blocks`
  * edges cross an epic, which is the fact that rules out drawing epics as
  * containers. Two issues with no epic at all cross no boundary.
  */

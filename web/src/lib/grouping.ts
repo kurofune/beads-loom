@@ -194,7 +194,7 @@ export function groupIssues(
         ),
       )
 
-    // Everything with no epic is a group, never a silent drop: on Project-Pheonix
+    // Everything with no epic is a group, never a silent drop: on a 207-issue game backlog
     // it is 35 issues — larger than any single epic, which is exactly why it is
     // appended after the count-descending sort rather than ranked by it. Leading
     // the Backlog with "No epic" would bury the epics the mode was chosen to see.

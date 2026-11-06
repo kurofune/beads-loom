@@ -53,7 +53,7 @@ func TestWriteDefaultNamesNoOneElsesProjects(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ReadFile: %v", err)
 	}
-	for _, banned := range []string{"/Users/", "~/Projects/", "nathangross", "djinn", "Project-Pheonix"} {
+	for _, banned := range []string{"/Users/", "~/Projects/", "nathangross", "djinn"} {
 		if strings.Contains(string(data), banned) {
 			t.Errorf("default config contains %q:\n%s", banned, data)
 		}

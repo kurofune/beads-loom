@@ -453,9 +453,9 @@ const PROJECTS: Project[] = [
     health: healthOf(DJINN_ISSUES),
   },
   {
-    name: 'Project-Pheonix',
-    db: 'Project_Pheonix',
-    workdir: '~/code/Project-Pheonix',
+    name: 'game',
+    db: 'game',
+    workdir: '~/code/game',
     source: 'config',
     reachable: false,
     reason: 'dial tcp 127.0.0.1:3309: connect: connection refused',
@@ -505,7 +505,7 @@ const MOCK_ROWS = Number(import.meta.env.VITE_MOCK_ROWS ?? 0) || 0
 const BY_PROJECT: Record<string, Issue[]> = {
   loom: padded(LOOM_ISSUES, MOCK_ROWS),
   djinn: DJINN_ISSUES,
-  'Project-Pheonix': [],
+  'game': [],
 }
 
 const MARKDOWN_BLURB: Record<string, Partial<IssueDetail>> = {
@@ -1012,7 +1012,7 @@ export const mockClient: LoomClient = {
         inStatusSince: ago(60 * (2 + n * 9)),
         stale: n === 1,
       })),
-      skipped: ['Project-Pheonix'],
+      skipped: ['game'],
     }),
 
   runs: (project) =>

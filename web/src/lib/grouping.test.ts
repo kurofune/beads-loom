@@ -308,7 +308,7 @@ describe('groupIssues by epic', () => {
   })
 
   it('keeps a trailing labelled group for issues with no epic ancestor, even when it is the largest', () => {
-    // On Project-Pheonix that group holds 35 issues — more than any single epic
+    // On a 207-issue game backlog that group holds 35 issues — more than any single epic
     // — so count-descending ordering would float it to the top, and a grouping
     // built only from the epics it found would drop those 35 rows outright.
     const found = epic('loom-3ft', 'Foundations')

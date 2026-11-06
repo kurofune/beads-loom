@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultProject, resolveStartProject, setDefaultProject } from './settings'
 
-const projects = [{ name: 'loom' }, { name: 'djinn' }, { name: 'Project-Pheonix' }]
+const projects = [{ name: 'loom' }, { name: 'djinn' }, { name: 'game' }]
 
 beforeEach(() => {
   localStorage.clear()
@@ -55,7 +55,7 @@ describe('resolveStartProject', () => {
   })
 
   it('reads the stored preference when none is passed', () => {
-    setDefaultProject('Project-Pheonix')
-    expect(resolveStartProject(projects)).toBe('Project-Pheonix')
+    setDefaultProject('game')
+    expect(resolveStartProject(projects)).toBe('game')
   })
 })
