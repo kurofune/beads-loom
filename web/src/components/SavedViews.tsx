@@ -78,7 +78,7 @@ export function SaveViewButton({
     <>
       <button
         type="button"
-        className="btn btn-quiet h-[26px] text-[11.5px]"
+        className="btn btn-quiet h-[26px] max-w-[220px] text-[11.5px]"
         onClick={() => {
           setName(existing?.name ?? '')
           setOpen(true)
@@ -95,7 +95,7 @@ export function SaveViewButton({
               : 'Save this filter and grouping as a named view'
         }
       >
-        {existing ? `✓ ${existing.name}` : 'Save view'}
+        {existing ? <span className="truncate">{`✓ ${existing.name}`}</span> : 'Save view'}
       </button>
 
       {open && (

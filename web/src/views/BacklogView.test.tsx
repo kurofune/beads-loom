@@ -8,6 +8,7 @@ import { qk } from '@/api/hooks'
 import type { Issue, IssueDetail, IssueList, Project } from '@/api/types'
 import { ToastProvider } from '@/components/Toast'
 import { IntegrationRoots } from '@/integrations'
+import { clearViews, saveView } from '@/lib/saved-views'
 import { BacklogView } from './BacklogView'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
@@ -881,5 +882,62 @@ describe('BacklogView', () => {
     expect(container.querySelector('[data-row="scale-001.001"]')).not.toBeNull()
     expect(header()?.textContent).toContain('scale-001')
     expect(container.textContent).not.toContain('No epic')
+  })
+})
+
+describe('BacklogView toolbar at narrow widths', () => {
+  const longName = 'Everything stale across the orchestration workspace this week'
+
+  afterEach(() => {
+    clearViews(project.name)
+  })
+
+  /** The TopBar part that holds Backlog's own filter controls. */
+  function controlRow(container: HTMLElement): HTMLElement {
+    const search = container.querySelector('header input[type="search"]')
+    let el = search?.parentElement ?? null
+    while (el && el.parentElement?.tagName !== 'HEADER') el = el.parentElement
+    if (!el) throw new Error('no filter control row in the top bar')
+    return el
+  }
+
+  it('wraps whole controls onto new rows instead of squeezing or wrapping their labels', async () => {
+    const container = await renderScopedBacklog([], 0, '/loom-scale/backlog')
+    const row = controlRow(container)
+    const classes = row.className.split(/\s+/)
+
+    expect(classes).toContain('flex-wrap')
+    expect(classes).toContain('max-w-full')
+    expect(classes).toContain('[&>*]:shrink-0')
+    expect(classes).toContain('[&_button]:whitespace-nowrap')
+    for (const label of ['Stale', 'Closed', 'Save view']) {
+      const button = [...row.querySelectorAll('button')].find((b) => b.textContent === label)
+      expect(button, label).toBeDefined()
+    }
+  })
+
+  it('bounds a long saved-view name to an ellipsis and keeps the full name readable', async () => {
+    saveView(project.name, {
+      name: longName,
+      query: '',
+      raw: false,
+      group: 'status',
+      includeClosed: false,
+      staleOnly: true,
+      hierarchy: 'all',
+    })
+    const container = await renderScopedBacklog([], 0, '/loom-scale/backlog')
+    const row = controlRow(container)
+    const stale = [...row.querySelectorAll('button')].find((b) => b.textContent === 'Stale')
+    await act(async () => stale?.click())
+
+    const saved = [...row.querySelectorAll('button')].find((b) => b.title.startsWith('This is the saved view'))
+    if (!saved) throw new Error('the saved view did not match the current backlog')
+    expect(saved.title).toContain(longName)
+    expect(saved.textContent).toContain(longName)
+    expect(saved.className.split(/\s+/).some((c) => c.startsWith('max-w-'))).toBe(true)
+    const label = saved.querySelector('span')
+    expect(label?.className.split(/\s+/)).toContain('truncate')
+    expect(label?.textContent).toContain(longName)
   })
 })
