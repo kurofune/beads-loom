@@ -16,6 +16,17 @@ const CORE_TABS = [
   { id: 'sweep', label: 'Sweep', path: 'sweep', chord: '' },
 ]
 
+/**
+ * The narrowest the project name may get: room for its first ten characters
+ * and the ellipsis, so a long name stays recognisable when the row is tight.
+ * A name that short never needs the floor.
+ */
+function nameFloor(name: string | undefined): string | undefined {
+  return name && name.length > NAME_FLOOR_CHARS ? `${NAME_FLOOR_CHARS + 2}ch` : undefined
+}
+
+const NAME_FLOOR_CHARS = 10
+
 export function TopBar({
   project,
   current = 'backlog',
@@ -36,12 +47,20 @@ export function TopBar({
     ...CORE_TABS.slice(at),
   ]
   return (
+    // One row while everything fits; past that the row wraps. Each part keeps
+    // its natural width, so the name is never squeezed by the filter bar and a
+    // control moves to the next row whole instead of clipping or wrapping its
+    // label. DOM order is visual order, so Tab still walks left to right.
     <header
-      className="flex shrink-0 items-center gap-4 border-b border-line px-4"
-      style={{ height: 'var(--header-h)' }}
+      className="flex shrink-0 flex-wrap items-center gap-x-4 gap-y-1.5 border-b border-line px-4 py-[9px]"
+      style={{ minHeight: 'var(--header-h)' }}
     >
-      <div className="flex min-w-0 items-baseline gap-2">
-        <h1 className="truncate text-[13.5px] font-semibold text-ink">
+      <div className="flex min-w-0 max-w-full items-baseline gap-2">
+        <h1
+          className="truncate text-[13.5px] font-semibold text-ink"
+          title={project?.name}
+          style={{ minWidth: nameFloor(project?.name) }}
+        >
           {project?.name ?? '—'}
         </h1>
         {/* The dolt database name, when it differs from the display name —
@@ -55,7 +74,7 @@ export function TopBar({
         {project && <ReadOnlyBadge project={project} />}
       </div>
 
-      <div className="seg shrink-0" role="tablist" aria-label="View">
+      <div className="seg shrink-0 [&>button]:whitespace-nowrap" role="tablist" aria-label="View">
         {tabs.map((v) => (
           <button
             key={v.id}
@@ -72,7 +91,7 @@ export function TopBar({
         ))}
       </div>
 
-      <div className="ml-auto flex items-center gap-2">
+      <div className="ml-auto flex max-w-full flex-wrap items-center justify-end gap-2 [&>*]:shrink-0 [&_button]:whitespace-nowrap">
         {project && <DoltSync project={project.name} enabled={project.reachable} />}
         {children}
       </div>
