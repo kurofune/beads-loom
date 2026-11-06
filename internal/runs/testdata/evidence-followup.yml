@@ -1,0 +1,97 @@
+bead: djinn-ccyz.10.3
+title: "[Djinn] Make rubric skill/agent/command paths config-resolvable (re-scoped from skill-names)"
+description: |
+  Wires the engine.json djinn.rubric_root (defined + validated by closed bead
+  10.1) into the three hardcoded rubric path call sites so a consumer can hold
+  rubrics outside .claude/. Default ".claude" preserves current Phoenix
+  behavior with zero config change. A relative root resolves against workDir;
+  an absolute root (a plugin install location) is used as-is. §4 browser
+  verification does not apply — backend Go, no web/ files; SCARS.md is all
+  UI/UX. Scope note: this bead makes the root CONFIGURABLE and proves a
+  plugin-like root works with zero .claude/ copies; fully-automatic zero-config
+  resolution to the plugin install dir is child djinn-ccyz.10.3.1.
+criteria:
+  - text: "reviewSkillCheckPaths (djinn/cmd/djinn/main.go:93), acQualitySkillCheckPath (main.go:105), and verify.LoadSkill (djinn/internal/djinn/verify/verify.go:276) resolve their rubric paths from config rather than the hardcoded .claude/ literals"
+    status: pass
+    non_code: false
+    implementation:
+      - cmd/djinn/main.go:97
+      - cmd/djinn/main.go:120
+      - cmd/djinn/main.go:132
+      - cmd/djinn/main.go:401
+      - internal/djinn/verify/verify.go:282
+    verification: go test -short -run 'TestPreflight|TestLoadSkill' ./cmd/djinn/ ./internal/djinn/verify/
+    evidence:
+      observations:
+        - "The .claude/ literals are gone: reviewSkillCheckSubpaths/acQualitySkillCheckSubpath are rubric-root-relative; buildSkillChecks (main.go:132) + resolveRubricPath (main.go:120) resolve under settings.RubricRoot; runSession preflight calls buildSkillChecks(workDir, settings.RubricRoot) at main.go:401"
+        - "verify.LoadSkill(projectRoot, rubricRoot) (verify.go:282) resolves <root>/skills/verify-acceptance/SKILL.md; buildReviewer passes settings.RubricRoot (main.go:51)"
+  - text: "Phoenix engine.json points the rubric root/paths at its current .claude/ locations (preserves current behavior)"
+    status: pass
+    non_code: false
+    implementation:
+      - cmd/djinn/main.go:120
+      - cmd/djinn/rubric_paths_test.go:71
+    verification: go test -short -run TestPreflight_DefaultRoot_LoadsFromDotClaude ./cmd/djinn/
+    evidence:
+      observations:
+        - "Default rubric_root is '.claude' (set by closed bead 10.1's resolveDjinnSettings), so Phoenix preserves current behavior with NO engine.json change required; it may also set rubric_root: '.claude' explicitly"
+        - "TestPreflight_DefaultRoot_LoadsFromDotClaude asserts every resolved check path sits under <workDir>/.claude/ and verify.LoadSkill loads from there"
+        - "No Phoenix engine.json exists in this djinn repo (engine/config/engine.json absent); the default is the preservation mechanism"
+  - text: "A consumer whose rubrics live outside .claude/ can point the binary at them — a test exercises a non-default rubric root and the preflight + verify load succeed"
+    status: pass
+    non_code: false
+    implementation:
+      - cmd/djinn/rubric_paths_test.go:98
+      - cmd/djinn/rubric_paths_test.go:136
+    verification: go test -short -run 'TestPreflight_CustomRoot_PassesWithNoDotClaude|TestPreflight_AbsoluteRoot_ResolvesUnderPluginRoot' ./cmd/djinn/
+    evidence:
+      observations:
+        - "TestPreflight_CustomRoot_PassesWithNoDotClaude points rubric_root at adapters/claude-code (no .claude/), asserts buildSkillChecks resolves all paths under that root (len>0 + prefix loop — closes the vacuity an empty-slice would otherwise hide), ValidateSkillPrompts passes, and verify.LoadSkill loads"
+        - "TestPreflight_AbsoluteRoot_ResolvesUnderPluginRoot exercises an ABSOLUTE plugin root (the real plugin-install shape) — buildSkillChecks composes under it as-is, ignoring workDir"
+  - text: "TDD RED: config-driven rubric resolution with a custom root"
+    status: pass
+    non_code: false
+    implementation:
+      - cmd/djinn/rubric_paths_test.go:98
+      - internal/djinn/verify/verify_test.go:432
+    verification: go test -short -run 'TestPreflight_CustomRoot_PassesWithNoDotClaude|TestLoadSkill_CustomRelativeRoot' ./cmd/djinn/ ./internal/djinn/verify/
+    evidence:
+      observations:
+        - "RED confirmed: tests referencing resolveRubricPath/buildSkillChecks and the 2-arg verify.LoadSkill failed to compile (golangci-lint typecheck) before the implementation; GREEN after"
+        - "TestLoadSkill_CustomRelativeRoot loads verify-acceptance from adapters/claude-code with no .claude/ present"
+  - text: "TDD RED: default config preserves current Phoenix behavior (preflight + verify load from .claude/)"
+    status: pass
+    non_code: false
+    implementation:
+      - cmd/djinn/rubric_paths_test.go:71
+      - internal/djinn/verify/verify_test.go:384
+    verification: go test -short -run 'TestPreflight_DefaultRoot_LoadsFromDotClaude|TestLoadSkill_ReturnsContents' ./cmd/djinn/ ./internal/djinn/verify/
+    evidence:
+      observations:
+        - "TestPreflight_DefaultRoot_LoadsFromDotClaude (rubric_root '.claude') asserts paths under <workDir>/.claude/ and the preflight + verify load succeed"
+        - "TestLoadSkill_ReturnsContents updated to LoadSkill(root, '.claude') and still loads from root/.claude/skills/verify-acceptance/SKILL.md"
+  - text: "The ccyz.9.3 dual-existence stopgap is collapsed: Phoenix no longer requires both an adapter copy and a CWD-relative .claude/ copy of the rubrics"
+    status: pass
+    non_code: false
+    implementation:
+      - cmd/djinn/main.go:132
+      - cmd/djinn/rubric_paths_test.go:98
+    verification: go test -short -run TestPreflight_CustomRoot_PassesWithNoDotClaude ./cmd/djinn/
+    evidence:
+      observations:
+        - "Capability proven: with rubric_root pointed at a single configured source and ZERO .claude/ copies present, the binary preflight + verify load both succeed (TestPreflight_CustomRoot_PassesWithNoDotClaude asserts no .claude/ exists). One source now suffices — the dual copy is no longer required"
+        - "Operational removal of Phoenix's redundant copies is a Phoenix-side change; this bead delivers + proves the harness capability that makes it possible"
+  - text: "Existing tests pass"
+    status: pass
+    non_code: false
+    implementation:
+      - internal/djinn/verify/verify_test.go:384
+      - internal/djinn/verify/verify_test.go:409
+    verification: go test -short ./...
+    evidence:
+      observations:
+        - "Full short tree green after the LoadSkill signature change (TestLoadSkill_ReturnsContents / TestLoadSkill_MissingFile_Errors updated to the 2-arg form); only production LoadSkill caller (buildReviewer) updated"
+        - "go vet clean on cmd/djinn + verify"
+follow_up:
+  - djinn-jvhf
+  - djinn-g2bz

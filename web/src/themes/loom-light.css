@@ -1,0 +1,89 @@
+/* ---------------------------------------------------------------------------
+ * loom-light — "linen & ink"
+ * ---------------------------------------------------------------------------
+ * Not a naive inversion. Paper is warm (hue 85); the ink is cool (hue 265).
+ * That slight temperature opposition is what stops a light UI from reading as
+ * a washed-out screenshot of the dark one, and it keeps the warm priority ramp
+ * legible against a warm ground.
+ *
+ * Contrast ratios below are computed by `npm run check:contrast`, which parses
+ * this file — they are measured, not asserted. AA small-text floor is 4.5:1.
+ * ------------------------------------------------------------------------- */
+
+[data-theme='loom-light'] {
+  color-scheme: light;
+
+  /* — Surfaces ————————————————————————————————————————————————————————— */
+  --surface: oklch(0.982 0.004 85);
+  --surface-sunken: oklch(0.952 0.007 85);
+  --surface-raised: oklch(1 0 0);
+  --surface-overlay: oklch(1 0 0);
+  --surface-hover: oklch(0.955 0.006 85);
+  --surface-active: oklch(0.925 0.008 85);
+  --surface-selected: oklch(0.945 0.021 118);
+
+  /* — Lines ————————————————————————————————————————————————————————————— */
+  --border: oklch(0.888 0.008 85);
+  --border-strong: oklch(0.775 0.01 85);
+  --border-focus: var(--accent);
+
+  /* — Text ————————————————————————————————————————————————————————————— */
+  --text: oklch(0.235 0.013 265); /* 13.37:1 worst (on active) */
+  --text-muted: oklch(0.475 0.013 265); /*  5.36:1 worst (on active) */
+  --text-faint: oklch(0.525 0.013 265); /*  4.61:1 worst (on selected) */
+  --text-inverted: oklch(0.985 0.003 85);
+
+  /* — Accent: LOOM SIGNAL (deep moss — the chartreuse, grown up) ————————— */
+  --accent: oklch(0.505 0.14 133); /*  4.79:1 worst (on selected) */
+  --accent-muted: oklch(0.6 0.13 133);
+  --accent-text: oklch(0.995 0 0);
+
+  /* — Semantic ————————————————————————————————————————————————————————— */
+  --danger: oklch(0.52 0.2 22); /*  5.24:1 worst (on selected) */
+  --warn: oklch(0.533 0.13 65); /*  4.60:1 worst (on selected) */
+  --ok: oklch(0.508 0.14 152); /*  4.61:1 worst (on selected) */
+
+  /* — Status (categorical) —————————————————————————————————————————————— */
+  --status-open: oklch(0.51 0.03 255); /*  4.91:1 worst (on selected) */
+  --status-in-progress: oklch(0.505 0.115 215); /*  4.64:1 worst (on selected) */
+  --status-blocked: oklch(0.52 0.2 22); /*  5.24:1 worst (on selected) */
+  --status-deferred: oklch(0.505 0.15 278); /*  5.25:1 worst (on selected) */
+  --status-closed: oklch(0.523 0.022 150); /*  4.60:1 worst (on selected) */
+  --status-pinned: oklch(0.533 0.13 65); /*  4.60:1 worst (on selected) */
+  --status-hooked: oklch(0.51 0.2 345); /*  5.51:1 worst (on selected) */
+
+  /* — Issue type (categorical) ———————————————————————————————————————————— */
+  --type-epic: oklch(0.5 0.19 305);
+  --type-feature: oklch(0.5 0.15 255);
+  --type-task: oklch(0.5 0.12 160);
+  --type-bug: oklch(0.54 0.17 40);
+  --type-chore: oklch(0.52 0.02 90);
+  --type-decision: oklch(0.51 0.11 90);
+  --type-spike: oklch(0.52 0.19 355);
+  --type-story: oklch(0.5 0.1 190);
+  --type-milestone: oklch(0.54 0.13 60);
+
+  /* — Priority (sequential, hot → cold) ————————————————————————————————— */
+  --priority-p0: oklch(0.515 0.215 27); /*  5.30:1 worst (on selected) */
+  --priority-p1: oklch(0.538 0.15 50); /*  4.62:1 worst (on selected) */
+  --priority-p2: oklch(0.529 0.09 75); /*  4.60:1 worst (on selected) */
+  --priority-p3: oklch(0.525 0.028 90); /*  4.61:1 worst (on selected) */
+  --priority-p4: oklch(0.525 0.016 90); /*  4.61:1 worst (on selected) */
+
+  /* — Label semantics —————————————————————————————————————————————————— */
+  --label-review: oklch(0.5 0.18 330); /*  5.68:1 worst (on selected) */
+  --label-operator: var(--warn);
+
+  /* — Depth ————————————————————————————————————————————————————————————— */
+  --shadow-panel: 0 0 0 1px oklch(0.8 0.01 85 / 0.9), -24px 0 48px -16px oklch(0.5 0.02 85 / 0.22);
+  --shadow-overlay: 0 0 0 1px oklch(0.8 0.01 85 / 0.9), 0 16px 40px -10px oklch(0.5 0.02 85 / 0.25);
+  --shadow-control: 0 1px 2px oklch(0.6 0.02 85 / 0.18);
+  --scrim: oklch(0.5 0.015 85 / 0.4);
+
+  /* — Texture ———————————————————————————————————————————————————————————— */
+  --thread: repeating-linear-gradient(
+    90deg,
+    oklch(0.3 0.01 265 / 0.035) 0 1px,
+    transparent 1px 7px
+  );
+}

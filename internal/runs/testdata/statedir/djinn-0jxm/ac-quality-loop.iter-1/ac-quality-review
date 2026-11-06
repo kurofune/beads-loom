@@ -1,0 +1,14 @@
+```json
+{
+  "verdict": "CONCRETE",
+  "bead": "djinn-0jxm",
+  "criteria_count": 4,
+  "embarrassing_count": 0,
+  "findings": [],
+  "operator_required_count": 0,
+  "operator_required": [],
+  "bead_type": "feature",
+  "acceptance_criteria": "production FreshnessProber affirmatively returns AlreadySatisfied=true when deliverable exists at HEAD (grep symbol/path or run cited test); unit test, no LLM call\nreturns AlreadySatisfied=false when deliverable absent; unit test, falls through to LLM\ndeterministic no-LLM close path fires end-to-end in real formula freshness-loop; env-gated integration test (DJINN_INTEGRATION=1)\nsafety invariant: missing/errored/inconclusive NEVER closes alone; unit test asserts false + error path yield fresh/proceed",
+  "sufficiency": null
+}
+```

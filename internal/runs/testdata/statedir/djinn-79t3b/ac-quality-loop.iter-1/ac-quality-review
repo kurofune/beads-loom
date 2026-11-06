@@ -1,0 +1,11 @@
+{
+  "verdict": "CONCRETE",
+  "bead": "djinn-79t3b",
+  "criteria_count": 5,
+  "embarrassing_count": 0,
+  "findings": [],
+  "operator_required_count": 0,
+  "operator_required": [],
+  "bead_type": "bug",
+  "acceptance_criteria": "`djinn formula describe core/iter-tdd.formula.toml --json` emits the composed graph: its ordered `.steps[].id` list is element-for-element identical to that of `djinn formula describe --embedded iter-tdd --json`; verified by a Go test in cmd/djinn that runs both invocations and compares the two id sequences\nThat composed disk-path graph contains the extends-inherited ids ac-quality-loop and verify-loop and the tdd-cycle expansion ids verify-red, verify-green, and refactor; verified by the same Go test asserting each of the five ids is present in .steps[].id\nThe JSON emitted for core/iter.formula.toml, core/iter-light.formula.toml and core/iter-rnd.formula.toml is byte-identical to pre-change fixtures at cmd/djinn/testdata/describe-iter.golden.json, describe-iter-light.golden.json and describe-iter-rnd.golden.json — each captured from the binary at HEAD BEFORE this change and committed in the first (red) commit so it cannot be regenerated into truth; verified by a Go table test comparing each describe invocation's stdout against its fixture\nAn unresolvable extends or compose.expand.with reference makes describe exit non-zero with stderr naming the unresolved reference; verified by a Go test that writes a temp formula declaring extends = [\"does-not-exist\"], runs describe on it, and asserts a non-zero exit code and stderr containing the string \"does-not-exist\"\ngo test -short ./... is green; verified by the command passing"
+}

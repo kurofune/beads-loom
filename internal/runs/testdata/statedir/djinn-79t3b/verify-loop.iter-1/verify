@@ -1,0 +1,36 @@
+{
+  "complete": true,
+  "reason": null,
+  "criteria": [
+    {
+      "index": 1,
+      "status": "pass",
+      "note": "formula_command.go:53 routes the disk branch through formula.LoadComposedFormula after classifying with LoadFormula. Verified independently of the test: `djinn formula describe core/iter-tdd.formula.toml --json` and `--embedded iter-tdd --json` both emit the same ordered 13-id sequence (claim, freshness-loop, ac-quality-loop, write-tests-implement, verify-red-implement, implement, verify-green-implement, refactor-implement, impl-loop, review-impl-loop, review-tests-loop, verify-loop, commit-push). cmd_formula_describe_test.go:773 TestFormulaDescribe_DiskPathComposesVariant compares element-for-element and carries an anti-vacuity guard fataling if the embedded list is empty (the pre-fix bug was 0 steps, where two empty slices would compare equal). Test PASS, no skip.",
+      "diff_files": ["cmd/djinn/formula_command.go", "cmd/djinn/cmd_formula_describe_test.go"]
+    },
+    {
+      "index": 2,
+      "status": "pass",
+      "note": "All five ids confirmed present in my own CLI run of the composed disk graph: ac-quality-loop and verify-loop (inherited via extends=[\"iter\"]) and verify-red-implement, verify-green-implement, refactor-implement (spliced by the tdd-cycle expansion). Asserted at cmd_formula_describe_test.go:773. On the mid-run criterion edit: judged a LEGITIMATE naming correction, not a post-hoc weakening. core/formulas/tdd-cycle.formula.toml authors its template ids literally as `verify-red-{{target}}`, `verify-green-{{target}}`, `refactor-{{target}}`, so with target=\"implement\" the bare stems verify-red/verify-green/refactor can never appear as step ids in any composed graph — the original text named ids no correct implementation could produce. I ruled out the weakening scenario (implementer changes the suffixing, then edits the criterion to match) mechanically: `git diff --name-only 313b323..HEAD -- core/ internal/djinn/formula/` returns zero files, and tdd-cycle.formula.toml was last touched in 2858d49, an ancestor of the base, so the suffixing behavior predates this bead and is untouched by the diff. The corrected text preserves assertion strength exactly: same five ids, same provenance split of 2 inherited plus 3 spliced.",
+      "diff_files": ["cmd/djinn/cmd_formula_describe_test.go"]
+    },
+    {
+      "index": 3,
+      "status": "pass",
+      "note": "The no-op regression guard is genuinely un-regenerable, verified mechanically rather than from the evidence claim. (a) `git show --stat f7d27b2` shows the red commit contains ONLY cmd_formula_describe_test.go plus the three goldens, 756 insertions, zero source changes. (b) `git diff --stat f7d27b2..HEAD -- cmd/djinn/testdata/` is empty: goldens byte-unchanged since the red commit, and the green commit 1a1fccb touched only formula_command.go. (c) Strongest check: I built a binary from the baseline worktree at 313b323 and diffed its describe output for all three standalone formulas against the committed goldens - all three IDENTICAL, proving the fixtures encode pre-change behavior and could not have been regenerated into agreement with a regression. TestFormulaDescribe_StandaloneFormulasByteIdentical (cmd_formula_describe_test.go:822) passes at HEAD for all three subtests with an empty-golden vacuity guard; no subtest skipped.",
+      "diff_files": ["cmd/djinn/testdata/describe-iter.golden.json", "cmd/djinn/testdata/describe-iter-light.golden.json", "cmd/djinn/testdata/describe-iter-rnd.golden.json", "cmd/djinn/cmd_formula_describe_test.go"]
+    },
+    {
+      "index": 4,
+      "status": "pass",
+      "note": "cmd_formula_describe_test.go:861 TestFormulaDescribe_UnresolvableReference writes a temp formula with extends=[\"does-not-exist\"] and asserts non-zero exit, empty stdout, and stderr containing \"does-not-exist\"; it covers the compose.expand.with reference kind as a second subtest, exceeding the criterion's literal demand. Both subtests PASS. Confirmed independently at the CLI with my own temp fixture: exit status 3 with stderr `djinn formula describe: render: referenced expansion missing from map: \"does-not-exist\" (looked in [does-not-exist.formula.toml formulas/does-not-exist.formula.toml])` and empty stdout.",
+      "diff_files": ["cmd/djinn/cmd_formula_describe_test.go"]
+    },
+    {
+      "index": 5,
+      "status": "pass",
+      "note": "Ran `go test -short ./...` myself at HEAD (1a1fccb): exit code 0 with zero FAIL lines across the full tree. formula_command.go:53 is the change under test.",
+      "diff_files": ["cmd/djinn/formula_command.go"]
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+2026-06-16T00:06:28-07:00	djinn-hmmp	spawn
+2026-06-16T00:06:28-07:00	djinn-zvjs	spawn
+2026-06-16T00:06:28-07:00	djinn-mxbm	spawn
+2026-06-16T00:16:41-07:00	djinn-mxbm	exit	COMPLETE	closed
+2026-06-16T00:16:41-07:00	djinn-0jxm	spawn
+2026-06-16T00:17:06-07:00	djinn-zvjs	restart
+2026-06-16T00:18:37-07:00	djinn-hmmp	exit	COMPLETE	closed
+2026-06-16T00:18:37-07:00	djinn-0t3c	spawn
+2026-06-16T00:30:44-07:00	djinn-zvjs	restart
+2026-06-16T00:31:13-07:00	djinn-0t3c	exit	COMPLETE	closed
+2026-06-16T00:43:57-07:00	djinn-zvjs	exit	COMPLETE	closed
+2026-06-16T01:30:17-07:00	djinn-0jxm	exit	COMPLETE	open
+2026-06-16T08:28:02-07:00	djinn-17lo	spawn
+2026-06-16T08:28:02-07:00	djinn-onp7	spawn
+2026-06-16T08:28:02-07:00	djinn-f6o4	spawn
+2026-06-16T08:28:35-07:00	djinn-onp7	exit	FAILED	operator-escalation halt (loop_exhausted)
+2026-06-16T08:28:35-07:00	djinn-8x7v	spawn
+2026-06-16T08:29:23-07:00	djinn-17lo	exit	FAILED	operator-escalation halt (loop_exhausted)
+2026-06-16T08:29:23-07:00	djinn-fzbp	spawn
+2026-06-16T08:29:36-07:00	djinn-f6o4	exit	FAILED	operator-escalation halt (loop_exhausted)
+2026-06-16T08:29:36-07:00	djinn-llr3	spawn
+2026-06-16T08:29:43-07:00	djinn-8x7v	exit	FAILED	operator-escalation halt (loop_exhausted)
+2026-06-08T20:35:47-07:00	djinn-at1x	exit	CRASHED
+2026-06-11T21:42:23-07:00	djinn-0e5h.1	exit	CRASHED	exit status 3
+2026-06-08T01:30:56-07:00	djinn-78l6	exit	COMPLETE
+2026-06-08T01:39:59-07:00	djinn-573z	exit	COMPLETE

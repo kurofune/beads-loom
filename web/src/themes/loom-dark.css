@@ -1,0 +1,93 @@
+/* ---------------------------------------------------------------------------
+ * loom-dark — "ink & thread" (default)
+ * ---------------------------------------------------------------------------
+ * A focused ops console read at night. Surfaces are near-black with a barely
+ * perceptible cool cast (hue 255, chroma ≤0.011) so the warm priority ramp has
+ * something to sit against; a truly neutral grey makes amber look muddy.
+ *
+ * Contrast ratios below are computed by `npm run check:contrast`, which parses
+ * this file — they are measured, not asserted. AA small-text floor is 4.5:1.
+ * ------------------------------------------------------------------------- */
+
+[data-theme='loom-dark'] {
+  color-scheme: dark;
+
+  /* — Surfaces ————————————————————————————————————————————————————————— */
+  --surface: oklch(0.168 0.008 255);
+  --surface-sunken: oklch(0.132 0.007 255);
+  --surface-raised: oklch(0.208 0.009 255);
+  --surface-overlay: oklch(0.238 0.01 255);
+  --surface-hover: oklch(0.235 0.01 255);
+  --surface-active: oklch(0.265 0.011 255);
+  --surface-selected: oklch(0.243 0.026 122);
+
+  /* — Lines ————————————————————————————————————————————————————————————— */
+  --border: oklch(0.295 0.01 255);
+  --border-strong: oklch(0.4 0.012 255);
+  --border-focus: var(--accent);
+
+  /* — Text ————————————————————————————————————————————————————————————— */
+  --text: oklch(0.945 0.005 255); /* 13.03:1 worst (on active) */
+  --text-muted: oklch(0.735 0.009 255); /*  6.52:1 worst (on active) */
+  --text-faint: oklch(0.628 0.011 255); /*  4.61:1 worst (on selected) */
+  --text-inverted: oklch(0.16 0.008 255);
+
+  /* — Accent: LOOM SIGNAL ————————————————————————————————————————————————
+     Chartreuse. Deliberately outside every status hue so "the system is
+     talking to you" never reads as a status. Focus rings, the selected-row
+     rail, ready ticks, primary actions. Nothing else. */
+  --accent: oklch(0.865 0.198 122); /* 11.20:1 worst (on selected) */
+  --accent-muted: oklch(0.72 0.15 122);
+  --accent-text: oklch(0.19 0.045 122);
+
+  /* — Semantic ————————————————————————————————————————————————————————— */
+  --danger: oklch(0.705 0.175 18); /*  5.71:1 worst (on selected) */
+  --warn: oklch(0.8 0.14 75); /*  8.53:1 worst (on selected) */
+  --ok: oklch(0.8 0.15 150); /*  9.19:1 worst (on selected) */
+
+  /* — Status (categorical: each status owns a hue) —————————————————————— */
+  --status-open: oklch(0.72 0.032 255); /*  6.56:1 worst (on selected) */
+  --status-in-progress: oklch(0.805 0.13 200); /* 9.28:1 worst (on selected) */
+  --status-blocked: oklch(0.705 0.175 18); /*  5.71:1 worst (on selected) */
+  --status-deferred: oklch(0.735 0.105 275); /*  6.80:1 worst (on selected) */
+  --status-closed: oklch(0.635 0.022 150); /*  4.78:1 worst (on selected) */
+  --status-pinned: oklch(0.8 0.14 75); /*  8.53:1 worst (on selected) */
+  --status-hooked: oklch(0.755 0.185 340); /*  6.81:1 worst (on selected) */
+
+  /* — Issue type (categorical: each type owns a hue; board card rail + glyph) — */
+  --type-epic: oklch(0.74 0.17 305);
+  --type-feature: oklch(0.76 0.13 250);
+  --type-task: oklch(0.78 0.13 160);
+  --type-bug: oklch(0.74 0.16 40);
+  --type-chore: oklch(0.7 0.02 90);
+  --type-decision: oklch(0.82 0.13 95);
+  --type-spike: oklch(0.76 0.16 355);
+  --type-story: oklch(0.78 0.11 185);
+  --type-milestone: oklch(0.78 0.11 60);
+
+  /* — Priority (sequential: one hue family, hot → cold) ————————————————— */
+  --priority-p0: oklch(0.705 0.205 27); /*  5.42:1 worst (on selected) */
+  --priority-p1: oklch(0.765 0.15 47); /*  7.33:1 worst (on selected) */
+  --priority-p2: oklch(0.805 0.08 70); /*  8.74:1 worst (on selected) */
+  --priority-p3: oklch(0.7 0.028 90); /*  6.08:1 worst (on selected) */
+  --priority-p4: oklch(0.628 0.016 90); /*  4.61:1 worst (on selected) */
+
+  /* — Label semantics (ARCHITECTURE.md §Bead field conventions) —————————— */
+  --label-review: oklch(0.76 0.15 330); /*  7.07:1 worst (on selected) */
+  --label-operator: var(--warn); /* needs-operator */
+
+  /* — Depth ————————————————————————————————————————————————————————————— */
+  --shadow-panel: 0 0 0 1px oklch(0.1 0 0 / 0.6), -24px 0 48px -12px oklch(0 0 0 / 0.55);
+  --shadow-overlay: 0 0 0 1px oklch(0.1 0 0 / 0.5), 0 16px 40px -8px oklch(0 0 0 / 0.6);
+  --shadow-control: 0 1px 2px oklch(0 0 0 / 0.3);
+  --scrim: oklch(0.09 0.006 255 / 0.62);
+
+  /* — Texture ————————————————————————————————————————————————————————————
+     Warp threads. Used at very low opacity behind empty states and the
+     sidebar footer; it is the only ornament in the entire interface. */
+  --thread: repeating-linear-gradient(
+    90deg,
+    oklch(1 0 0 / 0.028) 0 1px,
+    transparent 1px 7px
+  );
+}

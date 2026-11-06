@@ -1,0 +1,95 @@
+/* ---------------------------------------------------------------------------
+ * Loom — semantic design tokens
+ * ---------------------------------------------------------------------------
+ * Components NEVER reference a raw colour. They reference the semantic names
+ * declared here; the two theme files (loom-dark.css / loom-light.css) supply
+ * the values under [data-theme="…"]. Adding a third theme is data-only: copy a
+ * theme file, change the values, add it to THEMES in src/lib/theme.ts.
+ *
+ * Colour is authored in oklch so the priority ramp is perceptually even and
+ * every theme can be re-lightened without the hue drifting. Contrast ratios
+ * are machine-checked — `npm run check:contrast` parses THESE files and fails
+ * if any status/priority/text token drops below WCAG AA on its surface.
+ *
+ * ── The colour rule ────────────────────────────────────────────────────────
+ * Chrome is achromatic. The ONLY saturated things on screen are:
+ *   · status      — categorical hues (each status owns a hue)
+ *   · priority    — a single sequential red→neutral temperature ramp, so a
+ *                   column of badges reads as a heat gradient, not confetti
+ *   · --accent    — chartreuse "signal", reserved for focus / selection /
+ *                   readiness. It sits outside every status hue on purpose.
+ * ------------------------------------------------------------------------- */
+
+:root {
+  /* — Typography ————————————————————————————————————————————————————————— */
+  /* Archivo: a grotesque with squarish counters — holds up at 12px in a dense
+     table where Inter turns to mush. IBM Plex Mono for anything the eye has to
+     scan character-by-character: bead ids, timestamps, counts, costs. */
+  --font-sans:
+    'Archivo Variable', 'Archivo', ui-sans-serif, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', 'Menlo', monospace;
+
+  /* — Space / rhythm ————————————————————————————————————————————————————— */
+  --space-0: 0px;
+  --space-1: 2px;
+  --space-2: 4px;
+  --space-3: 6px;
+  --space-4: 8px;
+  --space-5: 12px;
+  --space-6: 16px;
+  --space-7: 24px;
+  --space-8: 32px;
+  --space-9: 48px;
+
+  /* Row height drives the whole vertical rhythm of the backlog. 30px keeps
+     ~24 rows on a 13" laptop viewport without feeling cramped. */
+  --row-h: 30px;
+  /* The backlog's id column, in `ch` so it tracks the mono font actually
+     rendering. This is only the floor — BacklogView measures the ids it has
+     loaded and overrides it per project (web/src/lib/idcolumn.ts). */
+  --id-col: 8ch;
+  --header-h: 44px;
+  --group-h: 26px;
+  --sidebar-w: 232px;
+  --detail-w: 560px;
+
+  /* — Radii ————————————————————————————————————————————————————————————— */
+  --radius-xs: 2px;
+  --radius-sm: 3px;
+  --radius-md: 5px;
+  --radius-lg: 8px;
+  --radius-full: 999px;
+
+  /* — Motion ———————————————————————————————————————————————————————————— */
+  /* An ops console should feel instant. Motion exists only to explain where a
+     surface came from; nothing decorative, nothing over 180ms. */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 90ms;
+  --dur-base: 140ms;
+  --dur-slow: 180ms;
+
+  /* — Z ————————————————————————————————————————————————————————————————— */
+  --z-sticky: 10;
+  --z-scrim: 40;
+  --z-panel: 50;
+  --z-modal: 60;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-fast: 0ms;
+    --dur-base: 0ms;
+    --dur-slow: 0ms;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Derived tokens — identical in every theme, so they live here rather than
+ * being copy-pasted into each theme file. They mix a semantic hue into the
+ * current surface, which means a new theme gets correct tints for free.
+ * ------------------------------------------------------------------------- */
+:root {
+  --tint-weak: 10%;
+  --tint: 16%;
+  --tint-strong: 24%;
+}

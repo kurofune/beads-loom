@@ -1,0 +1,78 @@
+# goreleaser v2. Local dry run: goreleaser release --snapshot --clean
+#
+# The binaries embed the web UI, so the hooks build it into
+# internal/webembed/dist before any Go build. A release machine needs Node 22.22.2+, 24.15+ or 26+.
+#
+# The embedded-Dolt driver links github.com/dolthub/gozstd, which is C, so the
+# build needs cgo: CGO_ENABLED=0 does not compile. The darwin targets use the
+# host's clang, so a release runs on macOS. The linux targets cross-compile
+# with zig (https://ziglang.org) into static musl binaries that run on any
+# linux, with no libc dependency.
+version: 2
+
+project_name: loom
+
+before:
+  hooks:
+    - npm ci --prefix web
+    - make build-web
+
+builds:
+  - id: loom
+    binary: loom
+    main: .
+    env:
+      - CGO_ENABLED=1
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    # The same three symbols the Makefile's LDFLAGS stamp.
+    ldflags:
+      - -s -w
+      - -X 'github.com/kurofune/beads-loom/internal/buildinfo.Version={{ .Version }}'
+      - -X 'github.com/kurofune/beads-loom/internal/buildinfo.Commit={{ .FullCommit }}'
+      - -X 'github.com/kurofune/beads-loom/internal/buildinfo.Date={{ .Date }}'
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    overrides:
+      - goos: linux
+        goarch: amd64
+        env:
+          - CC=zig cc -target x86_64-linux-musl
+        ldflags: &linux_ldflags
+          - -s -w
+          - -X 'github.com/kurofune/beads-loom/internal/buildinfo.Version={{ .Version }}'
+          - -X 'github.com/kurofune/beads-loom/internal/buildinfo.Commit={{ .FullCommit }}'
+          - -X 'github.com/kurofune/beads-loom/internal/buildinfo.Date={{ .Date }}'
+          - -extldflags -static
+      - goos: linux
+        goarch: arm64
+        env:
+          - CC=zig cc -target aarch64-linux-musl
+        ldflags: *linux_ldflags
+
+archives:
+  - id: loom
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+      - LICENSE
+
+release:
+  github:
+    owner: kurofune
+    name: beads-loom
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-snapshot+{{ .ShortCommit }}"
+
+changelog:
+  sort: asc

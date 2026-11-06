@@ -1,0 +1,26 @@
+{
+  "enabledPlugins": {},
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bd prime --hook-json"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "command -v djinn >/dev/null 2>&1 || exit 0; djinn needs-you"
+          }
+        ]
+      }
+    ]
+  }
+}

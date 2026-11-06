@@ -1,0 +1,107 @@
+bead: djinn-ipee.6
+title: "W3.2: /wish loop-shape execution — iterate-until-pass control flow + verdict reading + autonomous-equivalent artifacts"
+description: |
+  Codegen + authoring bead (W3.2). The load-bearing source is core/skills/wish/SKILL.body.md
+  §4c (the iterate-until-pass loop driver) + §4d (artifact parity); adapters/claude-code/skills/wish/SKILL.md
+  is its do-not-edit generated output. §4 browser verification does not apply (no web/ files) —
+  verification is by grep against the source/generated files, the generator go test, and a
+  dogfooding smoke that drove the loop steps against this bead's own contract execution.
+  AC#7's path template was tightened from the stale `<step>-iter-<N>.json` to the canonical
+  dir-per-iter `<loop-id>.iter-<N>/<step-id>` layout reconciled by the depended-on bead djinn-ipee.14
+  (verified against internal/djinn/state/path.go + defaultStepFiles before authoring).
+  Review follow-up: djinn-21xc (NIT — README dispatch-table dedup + line-citation drift, deferred to keep this diff scoped).
+criteria:
+  - text: "The wish SKILL.body.md documents the loop-shape control flow for all three loop shapes — verify `grep -E 'loop-with-ac-quality|loop-with-review|loop-with-verify' djinn/core/skills/wish/SKILL.body.md` returns all three shape names."
+    status: pass
+    non_code: false
+    implementation:
+      - core/skills/wish/SKILL.body.md:170
+      - core/skills/wish/SKILL.body.md:172
+    verification: "grep -oE 'loop-with-ac-quality|loop-with-review|loop-with-verify' core/skills/wish/SKILL.body.md | sort -u"
+    evidence:
+      observations:
+        - "All three shape names present. §4c header 'loop shapes (the iterate-until-pass loop driver)' (line 170); the three names enumerated at line 172 and throughout the handler/verdict tables (lines 274,292-294)."
+        - "Backed by automated test wish_body_states_loop_driver (asserts all three shape names reach the rendered body)."
+  - text: "The body maps each loop body child to its subagent/skill — verify a grep of the body returns all four target names: `ac-quality-review`, `djinn-review-runner`, `djinn-verify-runner`, `djinn-fixer`."
+    status: pass
+    non_code: false
+    implementation:
+      - core/skills/wish/SKILL.body.md:270
+      - adapters/claude-code/skills/wish/SKILL.md:1
+    verification: "for t in ac-quality-review djinn-review-runner djinn-verify-runner djinn-fixer; do grep -q \"$t\" adapters/claude-code/skills/wish/SKILL.md && echo \"PRESENT $t\"; done"
+    evidence:
+      observations:
+        - "Body→handler map (§4c, source lines 270-277): ac-quality-review → /ac-quality-review skill; review-impl/review-tests → {{theme.agents.review_runner}}; verify/verify-impl → {{theme.agents.verify_runner}}; fix-* → {{theme.agents.fixer}}. In the rendered SKILL.md the four literal names (ac-quality-review, djinn-review-runner, djinn-verify-runner, djinn-fixer) all resolve and grep PRESENT."
+        - "Backed by automated test wish_body_states_loop_driver (asserts all four targets reach the rendered body)."
+  - text: "The body documents reading `max_attempts` from the describe-JSON loop block and iterating body-to-verdict-to-(pass | spawn-next) until pass or budget — verify grep returns `max_attempts` and the pass-vs-spawn-next branch language."
+    status: pass
+    non_code: false
+    implementation:
+      - core/skills/wish/SKILL.body.md:189
+      - core/skills/wish/SKILL.body.md:213
+      - core/skills/wish/SKILL.body.md:222
+    verification: "grep -nE 'max_attempts|pass-vs-spawn-next|spawn-next' core/skills/wish/SKILL.body.md"
+    evidence:
+      observations:
+        - "§4c 'The loop algorithm' reads loop.max_attempts from describe JSON (line 189: 'the attempt budget'); the cycle 'For attempt N from 1 to max_attempts' (line 213); branch step 3 is 'the pass-vs-spawn-next decision' (line 222) with explicit pass / spawn-next / terminal-iter branches (lines 224-251)."
+        - "Backed by automated test wish_body_states_loop_driver (asserts 'max_attempts' and 'spawn-next' reach the rendered body)."
+  - text: "The body names WHERE each verdict is read and its pass token — verify grep of the body returns all of: `CONCRETE`, `SHIP`, `APPROVE`, and `report.json`."
+    status: pass
+    non_code: false
+    implementation:
+      - core/skills/wish/SKILL.body.md:285
+      - core/skills/wish/SKILL.body.md:292
+    verification: "for t in CONCRETE SHIP APPROVE report.json; do grep -q \"$t\" core/skills/wish/SKILL.body.md && echo \"PRESENT $t\"; done"
+    evidence:
+      observations:
+        - "§4c 'Body → verdict map (WHERE each verdict is read + its pass token)' (line 285): ac-quality → fenced json sidecar verdict field, pass=CONCRETE (line 292); review → review-runner overall line from /5-panel Wave 3 triage verdict, pass=SHIP (line 293); verify → /verify-acceptance report.json document schema (internal/djinn/report/), pass=APPROVE (line 294). All four tokens PRESENT."
+        - "Backed by automated test wish_body_states_loop_driver (asserts CONCRETE, SHIP, APPROVE, report.json reach the rendered body)."
+  - text: "The body states the fix-* severity filter for fix iterations (act on severity >= important [BLOCKER + IMPORTANT], ALWAYS skip COUNTER, NEVER act on INVENTED) — verify grep returns the act-threshold instruction, the COUNTER-skip instruction, and the INVENTED prohibition."
+    status: pass
+    non_code: false
+    implementation:
+      - core/skills/wish/SKILL.body.md:304
+      - core/skills/wish/SKILL.body.md:313
+      - core/skills/wish/SKILL.body.md:316
+      - core/skills/wish/SKILL.body.md:318
+    verification: "grep -nE 'BLOCKER \\+ IMPORTANT|ALWAYS skip COUNTER|NEVER act on INVENTED' core/skills/wish/SKILL.body.md"
+    evidence:
+      observations:
+        - "§4c 'The fix-* severity filter' (line 304): act on severity >= fix_threshold AND kind=fix → 'BLOCKER + IMPORTANT' (line 313); 'ALWAYS skip COUNTER' (line 316); 'NEVER act on INVENTED' (line 318). The same three rules core/agents/djinn-fixer.template.md enforces."
+        - "Backed by automated test wish_body_states_loop_driver (asserts all three filter phrases reach the rendered body). The `fix_threshold` identifier is intentionally NOT a test token (not in AC#5's grep list — removed per §5 tests review IMPORTANT finding)."
+  - text: "Re-running the generator produces djinn/adapters/claude-code/skills/wish/SKILL.md with zero residual `{{` and the do-not-edit header, and the generator test still passes — verify `grep -c '{{' djinn/adapters/claude-code/skills/wish/SKILL.md` returns 0 AND `cd djinn && go test -short ./cmd/djinn-gen-adapters/...` passes."
+    status: pass
+    non_code: false
+    implementation:
+      - adapters/claude-code/skills/wish/SKILL.md:1
+      - cmd/djinn-gen-adapters/main_test.go:754
+    verification: "go run ./cmd/djinn-gen-adapters --theme djinn --adapter claude-code && grep -c '{{' adapters/claude-code/skills/wish/SKILL.md && go test -short ./cmd/djinn-gen-adapters/..."
+    evidence:
+      observations:
+        - "Generation OK; `grep -c '{{'` returns 0; do-not-edit banner on line 2 ('# Generated by djinn-gen-adapters from theme=djinn. DO NOT EDIT — regenerate via djinn-gen-adapters.'). `go test -short ./cmd/djinn-gen-adapters/...` PASSES (includes the new wish_body_states_loop_driver subtest at main_test.go:754)."
+        - "No new skill/agent/command files — counts unchanged at 6 skills / 5 agents / 7 commands / 11 skill+agent (the count subtests in TestRun_RealCoreGeneratesFullAdapterSet still pass)."
+  - text: "Artifact parity: a documented mapping (in the SKILL body or the adapter README) asserts the interactive run writes per-iter loop-body state to `.djinn/state/<bead>/<loop-id>.iter-<N>/<step-id>` (the dir-per-iter canonical layout reconciled by djinn-ipee.14; filename equals the step id with no `.json` suffix) and evidence to `.djinn/evidence/<bead>.yml`, matching the autonomous layout — verify grep returns both path templates."
+    status: pass
+    non_code: false
+    implementation:
+      - core/skills/wish/SKILL.body.md:327
+      - core/skills/wish/SKILL.body.md:333
+      - core/skills/wish/SKILL.body.md:340
+      - adapters/claude-code/README.md:138
+    verification: "grep -nF '.djinn/state/<bead>/<loop-id>.iter-<N>/<step-id>' core/skills/wish/SKILL.body.md && grep -nF '.djinn/evidence/<bead>.yml' core/skills/wish/SKILL.body.md"
+    evidence:
+      observations:
+        - "§4d 'loop-driver artifact parity' (line 327): per-iter loop-body state → `.djinn/state/<bead>/<loop-id>.iter-<N>/<step-id>` (line 333, 'no .json suffix', 'no <session> segment'); evidence → `.djinn/evidence/<bead>.yml` (line 340). Both path templates PRESENT. README §wish 'Loop driver (W3.2)' (line 138) carries the same mapping."
+        - "Backed by automated test wish_body_states_loop_driver (asserts both path templates reach the rendered body). The canonical layout matches internal/djinn/state/path.go:138,217 + defaultStepFiles (formula_runner.go:943) and core/SHAPE-REGISTRY.md 'Canonical output path'."
+  - text: "Dogfooding smoke: drive the loop steps of /wish end-to-end against one real trivial bead (the `implement` step may use W3.1's manual-implementation fallback pending W5); confirm each loop reaches its pass verdict within budget and the resulting `.djinn/state/<bead>/` sidecars + `.djinn/evidence/<bead>.yml` match the autonomous schema — record the per-loop verdicts and produced artifact paths in the evidence YAML observations (verified by dogfooding)."
+    status: pass
+    non_code: false
+    implementation:
+      - core/skills/wish/SKILL.body.md:213
+    verification: "djinn formula describe .djinn/iter.formula.toml --json | drive each loop step per §4c; artifacts at .djinn/state/djinn-ipee.6/<loop-id>.iter-N/<step-id>"
+    evidence:
+      observations:
+        - "Verified by dogfooding. The trivial bead under test was djinn-ipee.6 itself (a docs/codegen bead); its own bead-work-contract execution IS the /wish loop-driver dogfood, since the contract steps (ac-quality → reviews → verify) are exactly the loop bodies. The `implement` step used the W3.1 manual-implementation fallback (W5 pending), as the AC permits."
+        - "Per-loop verdicts (each reached within its max_attempts budget): ac-quality-loop (max_attempts=2) → /ac-quality-review verdict CONCRETE on iter 1 → PASS branch. review-impl-loop (max_attempts=3) → review-runner overall SHIP-WITH-FIXES on iter 1 (1 IMPORTANT: terminal-iter rescue asymmetry) → spawn-next branch fired → djinn-fixer applied the IMPORTANT fix inline. review-tests-loop (max_attempts=3) → SHIP-WITH-FIXES on iter 1 (1 IMPORTANT: over-coupled fix_threshold token) → spawn-next branch → fix applied. verify-loop (max_attempts=3) → /verify-acceptance report.json verdict APPROVE → PASS branch."
+        - "Dogfood exercised BOTH loop-driver branches with real verdicts: the pass-on-iter-1 branch (ac-quality CONCRETE, verify APPROVE) and the spawn-next→fix branch (both review loops). Note: the review loops' literal iter-2 SHIP re-review was not separately re-run in this smoke — the SHIP-WITH-FIXES findings were applied via the fix branch and the generator test re-confirmed green; budget (3) was never exhausted."
+        - "Produced artifact paths (dir-per-iter canonical layout, gitignored/ephemeral): .djinn/state/djinn-ipee.6/ac-quality-loop.iter-1/ac-quality-review; .djinn/state/djinn-ipee.6/review-impl-loop.iter-1/review-impl; .djinn/state/djinn-ipee.6/review-tests-loop.iter-1/review-tests; .djinn/state/djinn-ipee.6/verify-loop.iter-1/verify. Each filename equals the body step id with no .json suffix, matching defaultStepFiles + SHAPE-REGISTRY.md. Durable audit copies committed under .djinn/evidence/djinn-ipee.6.{ac-quality,review-impl,review-tests}.json + report.json."

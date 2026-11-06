@@ -1,0 +1,60 @@
+
+# Beads / Dolt files (added by bd init)
+.dolt/
+*.db
+.beads-credential-key
+.beads/proxieddb/
+
+# beads runtime state (dolt data, server files) — DB is runtime state, not source
+.beads/dolt/
+.beads/embeddeddolt/
+.beads/dolt-server.*
+.beads/backup/
+.beads/interactions.jsonl
+.beads/last-touched
+.beads/metadata.json
+.beads/dolt-server-config.yaml
+.beads.gate.lock
+
+# build outputs
+/loom
+/dist
+web/dist/
+web/node_modules/
+node_modules/
+
+# djinn runtime state
+.djinn/state/
+.djinn/summoner-logs/
+
+# misc
+*.log
+.DS_Store
+.playwright-cli/
+
+# captured run logs that internal/runs parses are test fixtures, not runtime
+# output — `*.log` above swept them up, so the parser tests only passed on a
+# machine that happened to have them locally
+!internal/runs/testdata/**/*.log
+
+# frontend copied here by `make build` for go:embed; the placeholder is
+# committed so `go build ./...` works without a frontend build
+internal/webembed/dist/*
+!internal/webembed/dist/.gitkeep
+
+# Djinn (added by djinn init)
+.djinn/session-id
+go.work
+
+# Djinn (added by djinn init)
+.djinn/seats/*/runs/
+.djinn/needs-you-seen.json
+
+# Djinn (added by djinn init)
+.djinn/summoner-state.json
+.djinn/summoner-runs.jsonl
+.djinn/ops/
+.djinn/drain.out
+
+# machine-written run records; the same evidence lives as bead comments
+.djinn/evidence/

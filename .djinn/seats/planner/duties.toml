@@ -1,0 +1,94 @@
+# Scheduled duties for this seat. Each [[duty]] runs as a fresh headless
+# agent session loaded with this seat's charter, ledger and memory plus the
+# duty's prompt, logging to runs/<timestamp>-<duty>.log:
+#
+#   djinn seat run <seat> <duty>
+#
+# [[duty]]
+# name = "example"
+# schedule = "daily 07:00"   # or "every 30m" (a Go duration, at least 1m)
+# prompt = "What this duty does, in the seat's own words."
+# max_cost_usd = 2.0         # optional; omit it for no cap
+# mail = true                # optional; reads the seat's mail at start, and
+#                            # the workshop starts it early when mail waits
+# check = "test -s notes/todo.md"
+#                            # optional; a shell command the workshop runs in
+#                            # the repo root, with no model, at each slot:
+#                            # exit 0 runs the duty, exit 1 skips the slot,
+#                            # anything else runs it anyway
+# model = "fable"            # optional; the claude-code model this duty runs
+# effort = "medium"          # on, and its effort; omit either for the
+#                            # adapter default (opus[1m], high)
+#
+# A duty needs a schedule or mail = true. With mail = true and no schedule it
+# runs only when mail waits for this seat, never on a clock (and takes no
+# check).
+
+[[duty]]
+name = "plan"
+mail = true
+model = "fable"
+prompt = """
+Plan the ideas the lead mailed you (the ## Mail section below). Each message
+is one idea in the operator's words, but one: a gardener Memory sweep (mail
+from:seat:gardener) is no idea, so plan nothing for it. Apply each edit it
+lists whose quoted line still reads the same in this seat's memory.md, and
+name each skipped one in the ledger.
+
+For each idea message:
+
+1. Read it, then the code, docs, DECISIONS.md rulings (the ruling index;
+   each line links its docs/adr/ file) and open epics it touches
+   (`bd list --type epic --status open --json`).
+2. Run /plan-to-beads in Execute Mode on the idea, under a new epic labelled
+   proposed, with every emitted bead labelled proposed. Everything you file
+   drains only on triage's go. Also add the
+   `from:seat:planner` label to the epic and every bead you file. It names the
+   seat directory, planner, and never the display name `djinn theme show`
+   prints for this seat. Write every title in everyday words naming the
+   change the operator would notice, at most 80 characters, with no code
+   identifiers (no file, function, flag or bead names): the epic and bead
+   titles are what triage and the operator read first.
+3. A design question you cannot settle from the repo: plan what you can, then
+   defer that epic to the operator with what the epic is in plain words, the
+   question, why the repo cannot settle it, its two answers, and which you
+   recommend and why:
+   `djinn needs-you defer <epic-id> --what "<2-4 sentences in everyday words: what is wrong or proposed today, what would change, what the operator would notice; no file paths, bead ids or code names>" --why "<why the repo cannot settle it>" --question "<the design question>" --a "<first answer>" --b "<second answer>" --recommend <a|b> --because "<why you recommend that answer, in one line of everyday words>"`.
+   It then prints from djinn needs-you and lists in the digest, its what
+   first.
+4. Write one dated ledger entry per message: its id, the epic id, how many
+   beads you filed, the pre-filing check's verdict with each finding fixed or
+   rejected, and the question you deferred, if any.
+
+An idea you notice while planning that no message asked for is sent to the
+lead, never filed as a bead:
+`bd create --type message --title "<idea>" --label to:seat:lead --label idea --silent`
+with a description of a few lines on what it is and why it matters. Then put
+it to the operator in plain words: append six notes lines, one
+`bd update <id> --append-notes "<line>"` call each, on the id `--silent`
+printed:
+`what: <2-4 sentences in everyday words: what is wrong or proposed today, what would change, what the operator would notice; no file paths, bead ids or code names>`,
+`why: <why it is the operator's to decide, in one line of everyday words>`,
+`question: Worth planning?`, `a: plan it`, `b: decline it`,
+`recommend: <a|b> — <why you recommend that answer, in one line of everyday words>`.
+It lists in the digest's Ideas section, the ops room asks the operator with
+those lines, and only the operator's yes sends it back to you.
+
+You never file work that no message asked for. Close nothing: every message
+still open when you stop is closed as read.
+"""
+
+[[duty]]
+name = "inbox"
+mail = true
+max_cost_usd = 10.0
+prompt = """
+Read your mail (the ## Mail section below) and act on each message as this
+seat's charter directs. A message the charter does not cover, or one only the
+operator can decide, defer to the operator with one command that records
+what it is in plain words, why it is theirs (which rule keeps it from this
+seat), one question with two answers, and which answer you recommend and why:
+`djinn needs-you defer <id> --what "<2-4 sentences in everyday words: what is wrong or proposed today, what would change, what the operator would notice; no file paths, bead ids or code names>" --why "<why only the operator can decide it>" --question "<one question>" --a "<first answer>" --b "<second answer>" --recommend <a|b> --because "<why you recommend that answer, in one line of everyday words>"`
+instead of acting on it. Every message still open when you stop is closed as
+read.
+"""

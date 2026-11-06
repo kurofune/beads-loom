@@ -1,0 +1,506 @@
+# Scheduled duties for this seat. Each [[duty]] runs as a fresh headless
+# agent session loaded with this seat's charter, ledger and memory plus the
+# duty's prompt, logging to runs/<timestamp>-<duty>.log:
+#
+#   djinn seat run <seat> <duty>
+#
+# [[duty]]
+# name = "example"
+# schedule = "daily 07:00"   # or "every 30m" (a Go duration, at least 1m)
+# prompt = "What this duty does, in the seat's own words."
+# max_cost_usd = 2.0         # optional; omit it for no cap
+# mail = true                # optional; reads the seat's mail at start, and
+#                            # the workshop starts it early when mail waits
+# check = "test -s notes/todo.md"
+#                            # optional; a shell command the workshop runs in
+#                            # the repo root, with no model, at each slot:
+#                            # exit 0 runs the duty, exit 1 skips the slot,
+#                            # anything else runs it anyway
+# model = "fable"            # optional; the claude-code model this duty runs
+# effort = "medium"          # on, and its effort; omit either for the
+#                            # adapter default (opus[1m], high)
+#
+# A duty needs a schedule or mail = true. With mail = true and no schedule it
+# runs only when mail waits for this seat, never on a clock (and takes no
+# check).
+
+[[duty]]
+name = "tend-backlog"
+schedule = "daily 03:00"
+# Free check, no model: run the duty only when a deferred needs-operator bead
+# exists or the reaper's dry-run finds a candidate. A missing bd or reaper runs
+# the duty anyway.
+check = "bd list --status deferred --label needs-operator -n 1 --json | grep -q '\"id\"' || ! reaper | grep -q 'nothing to reap'"
+max_cost_usd = 10.0
+prompt = """
+Prune the idle backlog, then tend the beads that failed on bead quality.
+
+1. Prune: run `reaper --judge --live`. It judges each idle bead against the
+   repo at HEAD and closes or defers only what it finds dead. Copy its summary
+   line (the one starting "reaper [LIVE]:") into your ledger entry. Close
+   nothing by hand.
+2. Tend: for each deferred needs-operator bead
+   whose latest comment names bead quality (vague or untestable acceptance
+   criteria, a wrong or missing path, scope the bead cannot meet), author a
+   replacement through /create-bead carrying the proposed label, then
+   close the original with a comment naming the replacement id:
+   `bd close <id> --reason "replaced by <new-id>"`.
+   Add the `from:seat:gardener` label to every replacement bead. It names the
+   seat directory, gardener, and never the display name `djinn theme show`
+   prints for this seat.
+   Leave every other deferred bead as it is: it waits on the operator.
+3. Write one dated ledger entry: the reaper's summary line, then one line per
+   replacement (original id -> replacement id).
+
+Never remove the proposed label from any bead.
+"""
+
+[[duty]]
+name = "tend-code"
+schedule = "daily 04:00"
+# Free check, no model: run the duty only when a survey is due (none marked
+# yet, or 10 commits landed on main since the mark), a candidate survives the
+# guards, and the throughput cap allows at least one proposal.
+check = "djinn garden survey --check"
+max_cost_usd = 10.0
+prompt = """
+Turn the code survey's candidates into proposals the drain can land.
+
+1. Survey: run `djinn garden survey --json --max 10`. It prints one object:
+   `candidates` (each with category, file, line, symptom, measure and
+   fingerprint), `throughput` (the most proposals this run may file) and
+   `withheld`. File only from `candidates`.
+2. Read: for each candidate, read the code at its file:line and apply its
+   category's lens:
+   - hotspot: /codebase-design for the deepening the churn asks for, and
+     /simplify-style judgment on the review findings that keep recurring there.
+   - aging-todo: whether the TODO or FIXME still describes work the code needs.
+   - dead-code and stale-pointer: no lens; the fix is deleting the unreachable
+     code or correcting the pointer.
+   - keep-or-cut: no lens; it goes to the lead in step 4.
+   Drop a candidate whose fix lacks one reasonable shape (two plausible
+   designs, a fix that is a feature, or no fix at all) and write each drop and
+   its reason to your ledger entry.
+3. File: author each kept candidate through /create-bead, in survey order,
+   with the labels `proposed`, `from:seat:gardener`, `garden:<category>` and
+   `garden-fp:<fingerprint>`. Its description names the measured symptom (the
+   survey's symptom line) and the test that pins today's behaviour, which the
+   fix must keep green. File no more beads than the survey's `throughput`
+   field allows; a candidate past it waits for the next survey.
+   Add the `from:seat:gardener` label to every bead and message you file. It
+   names the seat directory, gardener, and never the display name
+   `djinn theme show` prints for this seat.
+4. Keep-or-cut: file no bead for a keep-or-cut candidate. Deleting behaviour is
+   the operator's call, so mail it to the lead as one keep-or-cut question with
+   evidence of use: its non-test call sites, any data still in bd or other
+   repos that sets it, and its git history (when it landed and why). Write the
+   body to a file and send it:
+   `bd create --type message --title "Keep or cut <name>?" --label to:seat:lead --label from:seat:gardener --silent --description="$(cat <file>)"`.
+5. Mark: run `djinn garden survey --mark`, so the next survey counts from now.
+6. Write one dated ledger entry: each filed bead (fingerprint -> bead id),
+   each keep-or-cut message id, and each drop with its reason.
+
+Never remove the proposed label from any bead. Edit no code.
+"""
+
+[[duty]]
+name = "tend-workshop"
+schedule = "daily 02:30"
+# Free check, no model: `djinn dolt-tend` restarts the beads Dolt server
+# around a `dolt gc --full` at most weekly on a quiet repo and exits 0 when
+# that failed, or while a failure waits for `--handed-off`; `djinn slow-watch` starts the nightly slow tier and exits 0
+# when the latest finished run is red and not handed off; otherwise run the
+# duty when a vendored skill's upstream moved past its pin (repos
+# carrying scripts/sync-vendored-skills.sh, with no bump bead open yet) or a
+# workshop candidate survives the guards.
+check = "djinn dolt-tend || djinn slow-watch || { [ -x scripts/sync-vendored-skills.sh ] && ! bd list --label garden:vendor-bump -n 1 --json | grep -q '\"id\"' && { scripts/sync-vendored-skills.sh --check >/dev/null 2>&1; [ $? -eq 1 ]; }; } || djinn garden survey --bed workshop --check"
+max_cost_usd = 10.0
+prompt = """
+Tend the workshop's own health: file the slow-tier breaks the nightly local run
+found, turn the workshop survey's candidates into proposals, propose a bump for
+each vendored skill whose upstream moved past its pin, then file a failed
+weekly Dolt server restart and gc.
+
+Every bead you file carries the `proposed` and `from:seat:gardener` labels.
+The `from:seat:gardener` label names the seat directory, gardener, and never
+the display name `djinn theme show` prints for this seat.
+
+1. Slow tier: run `djinn slow-watch`. When it exits 0 it prints one line: the
+   log path of the latest finished slow-tier run (go test -tags=slow ./...),
+   which failed and has not been handed off. When it exits 1, or prints no log
+   path, go to step 2.
+   a. Read that log. Each failure is a `--- FAIL: <Test>` line under a
+      `FAIL <package>` line, a build failure (`[build failed]`,
+      `[setup failed]`), or a panic or timeout inside a package's output.
+      Group them into distinct breaks: one per failing test, or one per
+      package when the whole package failed to build or timed out.
+   b. For each break, first look for an open bead that already names it:
+      `bd search "<TestName or package>" --status open`. When one does, add
+      one comment to it with the run date and the failure line, and file
+      nothing. Otherwise file one bead through /create-bead, labelled
+      `proposed`, `from:seat:gardener` and `garden:slow-tier`: the failing
+      package and test, the log's failure lines as evidence, and an
+      acceptance criterion that `go test -tags=slow -run '<TestName>' <package>`
+      exits 0.
+   c. Run `djinn slow-watch --handed-off <log path>` with the exact log path
+      step 1 printed. It marks only that run; a newer run that has finished
+      red since stays unmarked and is reported next time.
+2. Survey: run `djinn garden survey --bed workshop --json --max 10`. It prints
+   one object: `candidates` (each with category, file, line, symptom, measure
+   and fingerprint), `throughput` (the most proposals this run may file) and
+   `withheld`. File only from `candidates`. Skip a flaky-test candidate whose
+   test step 1 already filed or commented on.
+3. File: author each candidate through /create-bead, in survey order, with the
+   labels `proposed`, `from:seat:gardener`, `garden:<category>` and
+   `garden-fp:<fingerprint>`. Its description names the measured symptom (the
+   survey's symptom line) and the fix the category asks for:
+   - slow-creep: find the packages whose time grew most across the recent
+     .djinn/slow-watch logs and bring the tier back under its median.
+   - flaky-test: make the test deterministic; its criterion is that
+     `go test -tags=slow -count=5 -run '<TestName>' ./<file>` exits 0.
+   - dolt-size: compact the store with writers stopped — `bd dolt stop`,
+     `dolt gc --full` in .beads/dolt/<db>, `bd dolt start`, as `djinn
+     dolt-tend` does weekly — until .beads/dolt is under 500 MB. Never `bd gc`:
+     it squashes Dolt history and deletes closed beads older than 90 days.
+   - stale-binary: find why the workshop tick's reinstall left it behind and
+     fix that; name `go install ./cmd/djinn ./cmd/summoner` in the description
+     as the operator's interim step.
+   - stale-current: re-verify CURRENT.md against the repo and bd, and update
+     its Last verified line.
+   - current-budget: compact CURRENT.md to 4 KB and no line over 300
+     characters by deleting finished stories, keeping live state only; git
+     history is their archive (docs/adr/2026-10-24-finished-plans-are-deleted.md).
+   File no more beads than the survey's `throughput` field allows; a candidate
+   past it waits for the next survey.
+4. Vendored skills: only when `scripts/sync-vendored-skills.sh` exists, run
+   `scripts/sync-vendored-skills.sh --check`, always with `--check` (without
+   it the script rewrites the vendored copy). Exit 0: every vendored skill
+   matches its pin; file nothing. Exit 2: it could not read upstream; copy its
+   error into your ledger entry and file nothing. Exit 1: it prints one
+   `<skill>: upstream moved — <repo> <path>: <old-sha> -> <new-sha>` line per
+   moved skill. For each, first look for an open bump bead:
+   `bd list --label garden:vendor-bump --json`. When one names the skill in
+   its title, file nothing. Otherwise file one bead through /create-bead,
+   labelled `proposed`, `from:seat:gardener` and `garden:vendor-bump`, titled
+   `Bump vendored <skill> <old-sha> -> <new-sha>`. Its description names the
+   upstream repo, both SHAs and the steps
+   `scripts/sync-vendored-skills.sh --sha <new-sha> <skill>`, then
+   `go run ./cmd/djinn-gen-adapters --theme djinn --adapter claude-code`; its
+   acceptance criteria are that core/vendor/<skill>.pin names
+   `commit=<new-sha>` and `go test -short ./...` exits 0.
+5. Dolt store: run `djinn dolt-tend`. Exit 1: nothing failed (it ran
+   successfully and wrote its own ledger entry, or had nothing to do); file
+   nothing. Exit 0: it prints `dolt-tend:` lines naming the failing command
+   and its stderr, or the issue counts before and after that differ. A failed
+   run's lines stay pending, so this prints the failure this duty's check saw,
+   even when the server is still down. First look for an open bead that
+   already names it: `bd search "dolt-tend" --status open`. When one does, add
+   one comment to it with today's date and the printed lines, and file
+   nothing. Otherwise file one bead through /create-bead, labelled `proposed`,
+   `from:seat:gardener` and `garden:dolt-tend`: the printed lines verbatim as
+   evidence, and an acceptance criterion that `djinn dolt-tend` on a quiet
+   repo exits 1 and appends a dolt-tend entry to this ledger. Then run
+   `djinn dolt-tend --handed-off`, only after the comment or bead exists.
+   Never run `bd gc`, and never run `bd dolt stop` or `dolt gc` yourself.
+6. Write one dated ledger entry: the slow-tier run you handed off (or none),
+   each break (bead id filed, or the open bead you commented on), each filed
+   candidate (fingerprint -> bead id), the vendored-skill check (current,
+   the bump bead filed, the open bump bead, or its error), and the dolt-tend
+   result (nothing failed, the bead filed, or the open bead you commented on).
+
+Never remove the proposed label from any bead. Never edit code, run the tests
+yourself, run a drain, or commit anything.
+"""
+
+[[duty]]
+name = "tend-docs"
+schedule = "daily 04:30"
+# Free check, no model: run the duty only when CONTEXT_MAP.md is over 4096
+# bytes, holds a line over 300 characters or lacks a pointer to an existing
+# cmd/ or internal/ entry point, when map detail is still held for a
+# doc-comment bead, or when a docs finding no gardener bead carries yet
+# survives the guards and the throughput cap allows a proposal.
+check = "[ -f CONTEXT_MAP.md ] && { [ $(wc -c < CONTEXT_MAP.md) -gt 4096 ] || awk 'length($0) > 300 { f = 1 } END { exit !f }' CONTEXT_MAP.md || { m=; for d in cmd/*/ internal/*/ internal/*/*/; do [ -d \"$d\" ] && ! grep -qF \"\\`$d\\`\" CONTEXT_MAP.md && m=1; done; [ -n \"$m\" ]; }; } || [ -s .djinn/seats/gardener/map-detail.md ] || djinn garden survey --bed docs --check"
+max_cost_usd = 10.0
+# The map step edits the map and holds the detail it displaces here; the
+# runner commits both with the ledger.
+commits = ["CONTEXT_MAP.md", ".djinn/seats/gardener/map-detail.md"]
+prompt = """
+Keep CONTEXT_MAP.md true, then turn the docs survey's findings into proposals
+the drain can land.
+
+1. Map: when CONTEXT_MAP.md exists, measure it: `wc -c < CONTEXT_MAP.md`,
+   `awk 'length($0) > 300' CONTEXT_MAP.md`, and each directory matching
+   `cmd/*/`, `internal/*/` or `internal/*/*/` with no backticked pointer in it.
+   When any of those fired, edit CONTEXT_MAP.md directly, the one doc this duty
+   edits: one line per entry point, pointers only; add the missing pointer and
+   delete a gone one; shorten any line past 300 characters; stay at or under
+   4096 bytes with no line over 300 characters, re-checked with `wc -c` and awk
+   before the run ends. You edit no code, so detail that no longer fits is
+   held, never dropped: before deleting it from the map, append it verbatim
+   to `.djinn/seats/gardener/map-detail.md` under a `## <dir>` heading naming
+   its entry-point directory, adding to that heading when one exists. Step 4
+   files it as a `proposed` bead for that package's doc comment.
+2. Survey: run `djinn garden survey --bed docs --json --max 10`. It prints one
+   object: `candidates` (each with category, file, line, symptom, measure and
+   fingerprint), `throughput` (the most proposals this run may file) and
+   `withheld`. File survey findings only from `candidates`; the survey has
+   already dropped every finding a gardener bead carries, filed or declined.
+   The held map detail is this duty's one other source of proposals.
+3. Read: for each candidate, read the doc at its file:line and name the edit
+   that fixes it:
+   - stale-pointer: the path the doc means now (`git log --follow` or the
+     symbol's new home), or deleting the line when the thing is gone.
+   - stale-line: the line the pointer means now, or the pointer without one.
+4. File: first the held map detail, one heading of map-detail.md at a time in
+   file order. When an open bead from `bd list --label garden:docs --json` is
+   titled `Move <dir> map detail into its doc comment`, add the heading's
+   detail to it with `bd comments add <id> -f <file>`; otherwise author one
+   bead through /create-bead, labelled `proposed`, `from:seat:gardener` and
+   `garden:docs`, with that title and the heading's detail verbatim in its
+   description. Once that bead or comment carries it, delete the heading and
+   its detail from map-detail.md, and the file once no heading is left. Then author each new survey
+   finding through /create-bead, in survey order, with the labels `proposed`,
+   `from:seat:gardener`, `garden:docs`, `garden:<category>` and
+   `garden-fp:<fingerprint>`. Its description names the measured symptom (the
+   survey's symptom line) and the edit from step 3. File no more new beads,
+   held detail and survey findings together, than the survey's `throughput`
+   field allows, zero included; a comment on an open bead files none. Held
+   detail past it stays in map-detail.md, and the check reruns this duty
+   while the file holds any; a finding past it waits for the next survey.
+   Add the `from:seat:gardener` label to every bead you file. It names the
+   seat directory, gardener, and never the display name `djinn theme show`
+   prints for this seat.
+5. Write one dated ledger entry: the map edit (each pointer added, deleted or
+   shortened, and the byte count after) or none, each heading held in
+   map-detail.md and each still held after step 4, and each filed bead or
+   comment (fingerprint or `<dir> map detail` -> bead id).
+
+Never remove the proposed label from any bead. Edit no doc but CONTEXT_MAP.md,
+no seat file but map-detail.md and the ledger, and no code.
+"""
+
+[[duty]]
+name = "tend-evals"
+schedule = "daily 05:00"
+# Free check, no model: run the duty only when a commit since the last eval
+# touched what the triage judges read (their prompt and panel, the lead
+# charter, DECISIONS.md), or no eval is recorded.
+check = "djinn triage eval --due"
+max_cost_usd = 10.0
+# The eval appends its row here; the runner commits it with the ledger.
+commits = [".djinn/triage/evals.tsv"]
+prompt = """
+Rerun the triage eval: what the judges read changed since the last one, so
+their agreement with the operator may have moved.
+
+1. Previous: before running anything, copy the last row of
+   .djinn/triage/evals.tsv (none when the file is absent or holds only its
+   header). Its last column, majority, is the previous majority agreement.
+2. Eval: run `djinn triage eval --last 20`. It replays the judges on the 20
+   newest proposals with a known answer, prints each case and one summary
+   line, and appends one row to .djinn/triage/evals.tsv. When it exits
+   non-zero, write its error as your ledger line and stop.
+3. Ledger: write one dated ledger line holding the new evals.tsv row and the
+   previous row from step 1:
+   `tend-evals: <new row> (previous: <previous row, or none>)`.
+4. Mail: only when the new majority agreement is 10 points or more below the
+   previous one, mail the lead. Write the body to a file: both rows, the
+   eval's summary line, and each case whose majority disagreed with its truth,
+   with the judges' reasons. Send it:
+   `bd create --type message --title "Triage agreement fell <previous>% -> <new>%" --label to:seat:lead --label from:seat:gardener --silent --description="$(cat <file>)"`.
+   Mail nobody otherwise: no previous row, an empty majority in either row,
+   or a fall under 10 points.
+   Add the `from:seat:gardener` label to every message you file. It names the
+   seat directory, gardener, and never the display name `djinn theme show`
+   prints for this seat.
+
+Never vote on, decide, approve or decline a proposal. Edit no code.
+"""
+
+[[duty]]
+name = "tend-seats"
+schedule = "every 168h"
+# Free check, no model: run the duty only when a commit in the last 8 days
+# touched a seat's charter, memory or duties, DECISIONS.md, or a docs/adr/ ruling.
+check = "git log -1 --since='8 days ago' --format=%h -- '.djinn/seats/*/charter.md' '.djinn/seats/*/memory.md' '.djinn/seats/*/duties.toml' DECISIONS.md docs/adr/ | grep -q ."
+max_cost_usd = 10.0
+prompt = """
+Audit the seats' standing rules: find the lines that contradict each other and
+the workarounds the seats keep repeating, and propose one fix for each.
+
+1. Read: every seat's charter.md, memory.md and duties.toml under
+   .djinn/seats/, and the DECISIONS.md `## Decided` ruling index, together:
+   one line per ruling in force, its full text in the docs/adr/ file it
+   links. Note each line's file:line.
+2. Find two kinds of finding:
+   - contradiction: two lines that direct different actions for the same
+     situation, in one file, across seats, or a seat line against a
+     DECISIONS.md `## Decided` ruling. A line a newer line superseded counts
+     too. Precedence decides which line holds:
+     DECISIONS.md ## Decided > charter > duty prompt > memory, and within
+     memory the newer line wins.
+   - repeated workaround: two or more memory lines, in any seat, describing
+     the same manual step taken around the same tool behaviour.
+3. Fingerprint: write each line of the finding as `<file>:<line text>` (the
+   path, a colon, the line's text, no line number), sort them one per line,
+   and take the first 12 hex digits of their sha256:
+   `printf '%s\\n' '<file>:<line text>' ... | LC_ALL=C sort | shasum -a 256 | cut -c1-12`.
+   That is the finding's fp. Skip a finding whose `garden-fp:<fp>` label any
+   bead already carries, of any status, declined included:
+   `bd list --label garden-fp:<fp> --all`.
+4. File: author each remaining finding through /create-bead, with the labels
+   `proposed`, `from:seat:gardener`, `garden:seat-contradiction` or
+   `garden:seat-workaround`, and `garden-fp:<fp>`.
+   - A contradiction bead quotes both lines with their file:line, names the
+     line that holds and why, and states the edit: delete or rewrite the
+     losing line.
+   - A workaround bead names the tool behaviour to fix in code and cites the
+     memory lines. It carries no criterion that edits a memory.md: once the
+     fix lands, the next tend-seats run finds those lines stale.
+   At most 5 beads per run, one cap shared by contradictions, workarounds
+   and step 5's bd-memory findings: find those before filing here; a
+   finding past the cap waits for next week.
+   Add the `from:seat:gardener` label to every bead you file. It names the
+   seat directory, gardener, and never the display name `djinn theme show`
+   prints for this seat.
+5. Sweep the memories, keeping each small and true.
+   - Budget: run `wc -c .djinn/seats/*/memory.md`. The budget is 16384 bytes
+     per file, because a seat's memory is inlined whole into every prompt of
+     that seat. Sweep a file over budget first.
+   - Read every memory.md and the repo's bd memories: `bd memories --json`
+     prints a key-to-text map; skip its `schema_version` key, which is not a
+     memory. Find four kinds of finding, each with its check:
+     - duplicate: two or more lines say the same thing; the edit is one
+       merged line.
+     - stale: a line names a file, flag, function, test, command or bead
+       that HEAD or bd lacks; check it with `git grep -F`, `test -e` or
+       `bd show <id>`, never from memory.
+     - superseded: a later line replaces an earlier line about the same
+       thing; the edit deletes the earlier line.
+     - log: dated run-by-run notes (`tend-docs, 2026-10-06: ...`) that
+       should be one standing rule; the edit is that rule.
+   - Fingerprint each finding by step 3's recipe, a memory.md line written
+     `<file>:<line text>` and a bd memory written `bd:<key>:<text>`. Skip an
+     fp `bd list --label garden-fp:<fp> --all` already returns.
+   - A memory.md finding is never filed as a bead; a drain worker never
+     edits a seat file.
+     - On `.djinn/seats/gardener/memory.md`: apply the edit in this run.
+     - On another seat's memory.md: send that seat one message per run.
+       Write its findings to a file, one per line as file:line, the quoted
+       line, kind, fp and the exact edit (the replacement line, or delete),
+       then send it:
+       `bd create --type message --title "Memory sweep: <n> findings" --label to:seat:<seat> --label from:seat:gardener --silent --description="$(cat <file>)"`.
+       The mail carries no fingerprint label: a finding the seat did not
+       apply is found and mailed again next week.
+   - File each remaining bd memory finding through /create-bead with the
+     labels `proposed`, `from:seat:gardener`, `garden:bd-memory` and
+     `garden-fp:<fp>`. The bead quotes the key and states the exact edit:
+     `bd forget <key>` or `bd remember --key <key> "<text>"`.
+6. Audit the harness memories outside the repo, read-only. Edit nothing
+   outside the repo.
+   - Claude: the directory is `$HOME/.claude/projects/<slug>/memory/`, the
+     slug being the repo root's absolute path with every character outside
+     A-Z, a-z and 0-9 replaced by `-`:
+     `printf '%s' "$PWD" | sed 's#[^A-Za-z0-9]#-#g'`
+     (/Users/me/code/app gives
+     `-Users-me-code-app`). Read MEMORY.md and every *.md
+     there.
+   - Codex: read every *.md under `$HOME/.codex/memories/`.
+   - Apply step 5's four kinds to both stores.
+   - When at least one finding exists, write them to a file, one per line as
+     store, file, lines, kind, edit, and send one mail:
+     `bd create --type message --title "Memory audit: <n> Claude, <m> Codex findings" --label to:seat:lead --label from:seat:gardener --silent --description="$(cat <file>)"`.
+     A missing directory or zero findings sends no mail. The mail carries no
+     fingerprint: a finding nobody applied is mailed again next week.
+7. Write one dated ledger entry: each filed bead (fp -> bead id), each
+   skipped finding (fp -> the bead already carrying it), each finding past
+   the cap, each finding applied to this seat's memory.md, each memory sweep
+   (seat -> message id, finding count), each memory.md's size in bytes
+   against the budget, the bd memory count, and one line
+   `memory audit: claude <n> files, codex <m> files, <k> findings, mail <id or none>`.
+
+Never remove the proposed label from any bead.
+Edit no seat file but this seat's own memory.md, and no doc or code.
+"""
+
+[[duty]]
+name = "tend-epics"
+schedule = "daily 03:30"
+# Free check, no model: run the duty only when bd lists an open epic whose
+# children are all closed. A missing bd prints no epic and skips the slot.
+check = "bd epic close-eligible --dry-run --json | grep -q '\"id\"'"
+max_cost_usd = 5.0
+prompt = """
+Close out the epics whose children are done, but only after checking the
+epic's own acceptance lines: every child closed is not the epic done.
+
+1. List: run `bd epic close-eligible --dry-run --json`. It prints one object per
+   open epic whose children bd counts as complete; each `epic.id` is a
+   candidate. Never run it without `--dry-run`: that closes every epic on
+   children alone.
+2. Skip: for each candidate, run
+   `bd list --parent <epic-id> --all --flat --json`. Skip the epic, judging
+   nothing, when its most recently closed child closed under 24 hours ago (the
+   newest `closed_at`), or when it has any child whose status is not closed
+   (deferred counts as not closed). Its children have not settled yet.
+3. Judge: run `bd show <epic-id> --json` and read its `acceptance_criteria`.
+   Check every acceptance line of the epic other than the one saying every
+   child is closed against the repo at HEAD: read the file, run the command or
+   find the commit the line names. Never take a child's closing as proof of a
+   line. Each line ends in one of five places:
+   - a line that holds: note one evidence pointer for it (a file:line, a
+     command and its result, or a commit).
+   - a line that a closed child's approved design contradicts (the child
+     carries triage:go, or a lead-signed ruling comment or an operator answer
+     in its notes settled the point), or whose intent a passing test or
+     command at HEAD proves: reword the line to the approved behaviour —
+     write the epic's full acceptance text with that line replaced to a file
+     and run `bd update <epic-id> --acceptance "$(cat <file>)"` — citing the
+     child and the approval; the line then holds. Reword only toward what was
+     approved: a trial never run, a dogfood walk, or a judgment only a person can make still goes to the operator.
+   - a line an open bead would make true: name that bead.
+   - a line no open bead would make true: send the planner one message naming
+     the epic id and the unmet line, so it plans the work, and leave the epic
+     open. Write the body to a file and send it:
+     `bd create --type message --label to:seat:planner --label from:seat:gardener --title "Epic <epic-id> has an unmet line" --silent --description="$(cat <file>)"`.
+   - a line that needs the operator (dogfooding or a human judgment no
+     command can make): defer the epic to the operator with one command in
+     plain words, and leave the epic open:
+     `djinn needs-you defer <epic-id> --what "<2-4 sentences in everyday words: what the epic set out to do, which of its checks only a person can make, and what they would look at; no file paths, bead ids or code names>" --why "<why only the operator can settle that check>" --question "<one question>" --a "<first answer>" --b "<second answer>" --recommend <a|b> --because "<why you recommend that answer, in one line of everyday words>"`.
+   Add the `from:seat:gardener` label to every message you file. It names the
+   seat directory, gardener, and never the display name `djinn theme show`
+   prints for this seat.
+4. Close: only when every line holds. When you reworded any line, first run
+   `bd update <epic-id> --add-label closure-reworded` and add one comment,
+   written to a file and sent with `bd comments add <epic-id> -f <file>`,
+   carrying one line per reworded line, the first of them
+   `reworded: <old line> → <new line> (per <child-id>, <approval>)`. Then run
+   `bd close <epic-id> --reason "<one evidence pointer per line>"`.
+   Otherwise leave the epic open: an unmet line, a planner message or a
+   deferral never closes it.
+5. Write one dated ledger entry with one line per judged epic:
+   `<epic-id> -> closed | planner <message-id> | needs-you`, joining the
+   outcomes with a comma when an epic has more than one,
+   `<epic-id> -> closed, reworded <n> line(s)` when you reworded any, and
+   `<epic-id> -> waits on <bead-id>` when an open bead would make its line
+   true.
+
+Close no bead but an epic every one of whose lines you checked. Edit no code
+and no doc.
+"""
+
+[[duty]]
+name = "inbox"
+mail = true
+max_cost_usd = 10.0
+prompt = """
+Read your mail (the ## Mail section below) and act on each message as this
+seat's charter directs. A message the charter does not cover, or one only the
+operator can decide, defer to the operator with one command that records
+what it is in plain words, why it is theirs (which rule keeps it from this
+seat), one question with two answers, and which answer you recommend and why:
+`djinn needs-you defer <id> --what "<2-4 sentences in everyday words: what is wrong or proposed today, what would change, what the operator would notice; no file paths, bead ids or code names>" --why "<why only the operator can decide it>" --question "<one question>" --a "<first answer>" --b "<second answer>" --recommend <a|b> --because "<why you recommend that answer, in one line of everyday words>"`
+instead of acting on it. Every message still open when you stop is closed as
+read.
+"""

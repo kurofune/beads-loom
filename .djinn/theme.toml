@@ -1,0 +1,27 @@
+# The realm's names: .djinn/theme.toml. Seat directories keep their neutral
+# names; this file gives the realm, its words and its seats their names.
+# Manage it with djinn theme show | set <key> <value> | unset <key> | reset | check.
+# A commented "# key = value" line is unset and resolves to the value shown.
+
+[realm]
+# name: the realm's name.
+# name = ""
+# voice: how the realm's seats speak.
+# voice = ""
+
+[words]
+# work_item.singular: one unit of work.
+# work_item.singular = "bead"
+# work_item.plural: more than one unit of work.
+# work_item.plural = "beads"
+# digest: the morning report.
+# digest = "digest"
+# drain: one bounded run over the ready work.
+# drain = "drain"
+# seats: the standing agents, together.
+# seats = "seats"
+# workers: the drain's sessions, together.
+# workers = "workers"
+
+[seats]
+# <seat directory> = "<display name>"; default: the directory name.

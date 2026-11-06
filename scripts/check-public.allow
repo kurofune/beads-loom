@@ -1,0 +1,5 @@
+# Intended hits for scripts/check-public.sh, one per line: path:substring.
+# The hit is allowed when it is in `path` and its line contains `substring`.
+
+# The banned-string list that keeps personal paths out of the default config.
+internal/config/config_test.go:for _, banned := range []string{

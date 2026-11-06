@@ -1,0 +1,9 @@
+{
+  "verdict": "SHIP",
+  "severity_counts": {"BLOCKER": 0, "IMPORTANT": 0, "NIT": 2, "INVENTED": 0},
+  "invented_rate_pct": 0.0,
+  "promoted_findings": [
+    {"severity": "NIT", "kind": "fix", "priority": "P3", "file": "cmd/djinn/cmd_formula_describe_test.go", "line": 808, "title": "Bead AC2 names bare expansion ids (verify-red) but real spliced ids are suffixed (verify-red-implement); bead text never updated", "action": "bd update djinn-79t3b --acceptance=... replacing the bare ids with the suffixed ids the composer emits, preserving all other criteria verbatim in order."},
+    {"severity": "NIT", "kind": "counter", "priority": "P4", "file": "cmd/djinn/formula_command.go", "line": 53, "title": "Do not collapse the two-stage load into a bare LoadComposedFormula(path) call", "action": "Anti-recommendation: the LoadFormula-then-LoadComposedFormula pair is load-bearing (full-path error labelling + expansion type preservation). Do not apply."}
+  ]
+}

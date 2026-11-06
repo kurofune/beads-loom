@@ -1,0 +1,13 @@
+{
+  "djinn": {
+    "max_cost_usd_per_bead": 250.0,
+    "max_cost_usd_per_session": 1500.0,
+    "author_model": "claude-opus-4-8[1m]",
+    "author_effort": "high",
+    "reviewer_model": "claude-sonnet-4-6",
+    "reviewer_effort": "max",
+    "reviewer_tools": ["Read"],
+    "state_path": ".djinn/state",
+    "dirty_prefixes": ["internal/", "web/", "main.go"]
+  }
+}

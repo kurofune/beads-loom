@@ -1,0 +1,44 @@
+name: check
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      # make check runs the web gates (typecheck, token and contrast checks,
+      # vitest) as well as go vet and go test.
+      - run: npm ci --prefix web
+
+      # internal/queries tests run the dolt CLI (dolt init, dolt sql) against a
+      # scratch repo, so the binary must be on PATH. Only the CLI is installed;
+      # no Dolt server is started.
+      - name: Install the Dolt CLI
+        env:
+          DOLT_VERSION: v2.6.0
+        run: |
+          curl -fsSL "https://github.com/dolthub/dolt/releases/download/${DOLT_VERSION}/dolt-linux-amd64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/dolt-linux-amd64/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/dolt-linux-amd64/bin/dolt" version
+
+      # No Dolt server runs here, so every live-database test skips and names
+      # the command that would make it run: bd dolt start -C <workdir>.
+      - run: make check

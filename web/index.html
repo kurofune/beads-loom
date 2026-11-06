@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en" data-theme="loom-dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark light" />
+    <title>Loom</title>
+    <script>
+      // Pre-paint theme resolution — avoids a flash of the wrong surface.
+      // Mirrors resolveTheme() in src/lib/theme.ts; keep the two in sync.
+      ;(function () {
+        try {
+          var stored = localStorage.getItem('loom.theme')
+          var valid = stored === 'loom-dark' || stored === 'loom-light'
+          var prefersLight =
+            window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches
+          document.documentElement.dataset.theme = valid
+            ? stored
+            : prefersLight
+              ? 'loom-light'
+              : 'loom-dark'
+        } catch (_) {
+          document.documentElement.dataset.theme = 'loom-dark'
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

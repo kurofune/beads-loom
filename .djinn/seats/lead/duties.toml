@@ -1,0 +1,248 @@
+# Scheduled duties for this seat. Each [[duty]] runs as a fresh headless
+# agent session loaded with this seat's charter, ledger and memory plus the
+# duty's prompt, logging to runs/<timestamp>-<duty>.log:
+#
+#   djinn seat run <seat> <duty>
+#
+# [[duty]]
+# name = "example"
+# schedule = "daily 07:00"   # or "every 30m" (a Go duration, at least 1m)
+# prompt = "What this duty does, in the seat's own words."
+# max_cost_usd = 2.0         # optional; omit it for no cap
+# mail = true                # optional; reads the seat's mail at start, and
+#                            # the workshop starts it early when mail waits
+# check = "test -s notes/todo.md"
+#                            # optional; a shell command the workshop runs in
+#                            # the repo root, with no model, at each slot:
+#                            # exit 0 runs the duty, exit 1 skips the slot,
+#                            # anything else runs it anyway
+# model = "fable"            # optional; the claude-code model this duty runs
+# effort = "medium"          # on, and its effort; omit either for the
+#                            # adapter default (opus[1m], high)
+#
+# A duty needs a schedule or mail = true. With mail = true and no schedule it
+# runs only when mail waits for this seat, never on a clock (and takes no
+# check).
+
+[[duty]]
+name = "digest"
+schedule = "daily 07:00"
+max_cost_usd = 10.0
+prompt = """
+Write the morning digest: a short brief for the operator, written from the
+facts file alone.
+
+1. Run `djinn digest --write`. It gathers the facts without a model and writes
+   them to .djinn/digest/<YYYY-MM-DD>.facts.md (today's date; it prints the
+   path). It writes no digest the operator reads: step 4 does.
+2. Read that facts file and nothing else: no bd, git, run logs or older
+   digests. Every bead id and every $ figure in the brief is copied from it,
+   exactly as printed; never total, round or estimate one yourself.
+3. Write the brief to a new temp file (`mktemp`). If the facts file is a single
+   "Workshop idle" line, that line is the whole brief. Otherwise write plain
+   sentences for the operator, saying what the work means rather than
+   repeating bead titles written for agents, under these five headings, in
+   this order:
+   - `## Overnight`: two or three sentences on what the night came to (what
+     landed, toward which goals, what it cost) and the one thing worth
+     knowing.
+   - `## Needs you`: one plain question per bead the facts list under Needs
+     you, bead id first, answerable in a sentence, keeping its "why you:"
+     reason, ending in a question mark. "Nothing needs you." when none.
+   - `## What moved`: one line per goal (epic), not per bead: what it can do
+     now that it could not before, and how many beads landed under it.
+   - `## Triage`: one line on what was decided on the operator's behalf
+     (Decided overnight, Filed on my own) and what waits on a yes (Proposed,
+     Ideas); name a bead id only where the operator should review it.
+   - `## Watch`: what to keep an eye on (work in flight, mail waiting,
+     anything stuck or costly). "Nothing to watch." when quiet.
+   End with one last line pointing at the facts:
+   `Facts: .djinn/digest/<YYYY-MM-DD>.facts.md`.
+4. Run `djinn digest --publish <temp file>`. It checks every bead id and $
+   figure in the brief against the facts file and writes the brief to
+   .djinn/digest/<YYYY-MM-DD>.md and latest.md, or, when the brief names one
+   the facts lack, publishes the facts instead under a "Brief rejected" line.
+   It exits 0 either way; note in the ledger which one it published.
+
+Do not file, close, relabel or commit anything.
+"""
+
+[[duty]]
+name = "follow-ups"
+schedule = "every 5m"
+check = "djinn follow-ups --pending"
+max_cost_usd = 15.0
+prompt = """
+Triage the review follow-ups the drain filed, under the charter's
+## Self-approval, so real defects drain without waiting on the operator.
+
+1. List them: `djinn follow-ups --pending`. It prints, oldest first, each open
+   review follow-up without the lead-ruled label whose source bead has
+   landed. A follow-up whose source bead is still open is held for free: it
+   is not listed until that bead closes, so never hold one yourself. Work at
+   most four this run; the rest wait for the next run five minutes later. If
+   it prints nothing, stop.
+2. Run `djinn theme show` and read the `seats.lead` line: your display name.
+   Every comment you write begins with that name and a colon.
+3. For each one, read `bd show <id> --json`: its **Finding:** and
+   **Location:** lines name the defect, and its **Parent context:** line names
+   the bead it follows up. Read the code at the Location on main to see
+   whether the defect still exists. Never edit code.
+4. Decide, and do exactly one:
+   - Already fixed at HEAD, or the code is gone:
+     `bd close <id> --reason "already fixed at HEAD <sha7>: <file:line>"`.
+   - Not a defect (a re-measurement, a request to record evidence for a
+     closed bead, a style preference): `bd close <id> --reason "won't do: <why>"`.
+   - Made obsolete by an open bead that rewrites or deletes that code: add the
+     lead-ruled label and a comment naming that bead; leave it open.
+   - A real defect in landed work with one reasonable fix, other than a
+     deletion: author a fresh bead through /create-bead (type bug, priority 2, parent = the follow-up
+     source bead's parent epic, the `from:seat:lead` label, touches listing
+     every file the fix and its tests change, notes "Source: re-authored from
+     <id>"), labelled as the charter's ## Self-approval decides: seat-approved
+     and never proposed when it names a review follow-up naming a real defect
+     in landed work, proposed otherwise. The `from:seat:lead` label names the
+     seat directory, lead, and never the display name `djinn theme show`
+     prints (your comment signature is not a label). When filed
+     seat-approved, run
+     `bd update <new-id> --append-notes "seat-approved: review follow-up naming a real defect in landed work (<source bead>)"`.
+     Then `bd close <id> --reason "re-authored as <new-id>"`.
+   - Deleting code unreachable by construction (no non-test caller, a dead
+     branch), when your caller search at HEAD confirms it: author a fresh bead
+     through /create-bead with the same fields as a real defect, labelled
+     proposed and never seat-approved, whatever ## Self-approval names, so it
+     goes to triage. Cite that search in the new bead so each judge can re-run
+     it. Then `bd close <id> --reason "re-authored as <new-id>"`.
+   - Anything else (new scope, deleting behaviour a user or consumer repo can
+     see or depend on or a DECISIONS.md ruling or doc promises, deleting code
+     unreachable only by today's data, two reasonable fixes, a matter of
+     taste): leave it proposed. Hand it to the operator with one command,
+     which records the question where the ops room, the digest and the
+     needs-you hook read it:
+     `djinn needs-you defer <id> --what "<2-4 sentences in everyday words: what is wrong or proposed today, what would change, what the operator would notice; no file paths, bead ids or code names>" --why "<why only the operator can decide it>" --question "<one question>" --a "<first answer>" --b "<second answer>" --recommend <a|b> --because "<why you recommend that answer, in one line of everyday words>"`.
+     Then run
+     `bd update <id> --add-label=lead-escalated --add-label=lead-ruled`:
+     the defer clears lead-escalated, and without it the rule duty would take
+     the bead back as a give-back and the operator would see it only after
+     half an hour.
+     Change nothing else on it.
+5. Add one comment to each follow-up you left open or deferred, saying what you decided.
+6. Write one ledger entry for the run, headed date-only
+   (`## YYYY-MM-DD — follow-ups`, for the digest check's sake), naming each id
+   and what you did. A run that files, closes, relabels and comments nothing
+   writes no ledger entry: the seat's ledger is committed to main only when it
+   changes, so a quiet run commits nothing.
+
+Never remove the proposed label from a follow-up, never use `bd edit`, never
+run a drain or commit code.
+"""
+
+[[duty]]
+name = "triage"
+schedule = "every 10m"
+check = "djinn triage --check"
+max_cost_usd = 10.0
+model = "opus[1m]"
+prompt = """
+Vote as judge one on the proposals awaiting triage, then decide each, under the
+charter's ## Triage. Two more judges vote inside decide; the majority decides.
+
+1. List them: `djinn triage --list --json`. Work at most 8, oldest first; the
+   rest wait for the next run ten minutes later. If it lists nothing, stop.
+2. Read once for the run: the `## Decided` ruling index of DECISIONS.md and
+   the hard rules in the charter's ## Triage. Each index line is a ruling in
+   force; open the docs/adr/ file it links when a bead touches that ruling.
+3. For each id, read `bd show <id> --json` (title, description,
+   acceptance_criteria, labels, notes) and its parent's description
+   (`bd show <parent-id> --json`), the brief the bead serves. Read code only
+   to check a claim the bead makes. Never edit code.
+4. Vote: `djinn triage vote <id> --vote go|no-go --reason "<one line>" --what "<2-4 sentences in everyday words: what the proposal would change and what the operator would notice; no file paths, bead ids or code names>"`.
+   go when the work is worth building as filed; no-go when it is not. The
+   what is separate from the reason: it is what the operator reads first if
+   the proposal goes to them.
+   Add `--hard-rule <name>` only when the bead breaks one, and only with one
+   of these four names: deleting-behaviour, new-scope, contradicts-decisions,
+   changes-how-the-workshop-decides. A hard rule sends the bead to the
+   operator whatever the tally. deleting-behaviour covers deleting behaviour
+   a user or consumer repo can see or depend on, behaviour a DECISIONS.md
+   ruling or doc promises, or code unreachable only by today's data;
+   deleting code unreachable by construction (no non-test caller, a dead
+   branch) is not a hard-rule case. Before voting on a deletion, re-run at HEAD every caller
+   search or data query the bead cites, and flag deleting-behaviour when the
+   cited evidence does not reproduce or the deletion cites none.
+5. Then run `djinn triage decide <id>`. It spawns the other two judges,
+   tallies, records the decision and applies it, printing
+   "<id>: <decision> (<go>-<no-go>-<abstain>)". When it fails, note the error
+   and move on: the bead is listed again next run.
+6. Write one ledger entry for the run, `## YYYY-MM-DD HH:MM — triage`, listing
+   each id with its decision and tally as decide printed them.
+
+Never remove the proposed label by hand, never close a bead, never edit code,
+run a drain or commit anything: decide applies every outcome.
+"""
+
+[[duty]]
+name = "red-main"
+schedule = "every 10m"
+check = "djinn ci --unfiled"
+max_cost_usd = 15.0
+prompt = """
+File the fix for each red streak on main that has none yet, so a red main
+drains without waiting on the operator. The operator hears of a red streak
+only when it is still unfiled 30 minutes after its latest red run finished.
+
+1. List them: `djinn ci --unfiled`. It prints one line per workflow red on
+   main whose red streak no bead, of any status, labels yet:
+   `<call id> <fix label> — <title> — gh run view <run> --log-failed`.
+   If it prints nothing, stop.
+2. For each line, run its `gh run view <run> --log-failed` and note the
+   failing tests and their failure lines. Read code only to name the files
+   the fix changes. Never edit code.
+3. File one P0 bug per line through /create-bead: type bug, priority 0, the
+   title "<workflow> red on main since <first red sha8>: <failing tests>", a
+   description naming the run, the failing tests and their failure lines,
+   acceptance criteria that those tests pass and the workflow is green on
+   main again, touches listing every file the fix and its tests change, and
+   the parent the open epic whose brief owns the failing code
+   (`bd list --type epic --status open --json`), none when no epic does.
+   Label it `seat-approved`, `from:seat:lead` and the line's fix label
+   (`ci-red:<workflow>:<first red sha8>`, copied exactly), never `proposed`:
+   a red main is work the charter's ## Self-approval approves. When that
+   section does not name a red main, label it `proposed` in place of
+   `seat-approved`, so it goes to triage. The `from:seat:lead` label names
+   the seat directory, lead, and never the display name `djinn theme show`
+   prints. When filed seat-approved, run
+   `bd update <new-id> --append-notes "seat-approved: a red main"`.
+4. Write one ledger entry for the run, `## YYYY-MM-DD HH:MM — red-main`,
+   naming each call id and the bead filed for it.
+
+One bead per line, never two: the fix label is what drops a streak from the
+list. Never edit code, run a drain, close a bead or commit code.
+"""
+
+[[duty]]
+name = "inbox"
+mail = true
+max_cost_usd = 10.0
+prompt = """
+Read your mail (the ## Mail section below). Do not answer it: the operator
+reads lead mail, and a message closed here never reaches them.
+
+1. Write one dated ledger entry per message: its id, its title, and in one
+   line what it asks.
+2. Anything the operator must decide or should see (a sit-in note, an idea, a
+   question), defer to them with one command, saying in plain words what it
+   is (what it proposes, what would change, what the operator would notice),
+   naming why it is theirs (an idea is theirs because only the operator's yes
+   plans one), the one question with its two answers, and which answer you
+   recommend and why:
+   `djinn needs-you defer <id> --what "<2-4 sentences in everyday words: what is wrong or proposed today, what would change, what the operator would notice; no file paths, bead ids or code names>" --why "<why only the operator can decide it>" --question "<one question>" --a "<first answer>" --b "<second answer>" --recommend <a|b> --because "<why you recommend that answer, in one line of everyday words>"`.
+   It then prints from djinn needs-you and lists in the digest, its what
+   first.
+3. A gardener Memory sweep (mail from:seat:gardener) is not deferred: apply
+   each edit it lists whose quoted line still reads the same in this seat's
+   memory.md, and name each skipped one in the ledger.
+4. Leave every other message as it is: it is closed as read when you stop.
+
+Defer only, and apply a Memory sweep; file, close or relabel nothing else.
+"""

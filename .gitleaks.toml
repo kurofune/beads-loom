@@ -1,0 +1,9 @@
+# gitleaks config: the default rules, plus the bd kv key names the tests use.
+# generic-api-key reads `key := "loom.sweep.dismiss.…"` as a credential; these
+# strings are key names in Loom's own kv namespaces, not secrets.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "bd kv key names in Loom's own namespaces"
+regexes = ['''^initiative-retro\.[A-Za-z0-9.-]+$''', '''^loom\.[a-z]+\.[A-Za-z0-9.-]+$''']

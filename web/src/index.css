@@ -1,0 +1,562 @@
+@import 'tailwindcss';
+
+@import '@fontsource-variable/archivo/index.css';
+@import '@fontsource/ibm-plex-mono/400.css';
+@import '@fontsource/ibm-plex-mono/500.css';
+
+@import './themes/tokens.css';
+@import './themes/loom-dark.css';
+@import './themes/loom-light.css';
+
+/* ---------------------------------------------------------------------------
+ * Tailwind theme bridge
+ * ---------------------------------------------------------------------------
+ * `inline` matters here: it makes utilities emit `var(--surface)` rather than
+ * baking a value, so `[data-theme]` swaps re-paint without rebuilding the CSS.
+ * These are the ONLY colour names available to components — there is no
+ * bg-slate-800 in this codebase, and a raw hex in a component is a bug.
+ * ------------------------------------------------------------------------- */
+@theme inline {
+  --color-surface: var(--surface);
+  --color-sunken: var(--surface-sunken);
+  --color-raised: var(--surface-raised);
+  --color-overlay: var(--surface-overlay);
+  --color-hover: var(--surface-hover);
+  --color-active: var(--surface-active);
+  --color-selected: var(--surface-selected);
+
+  --color-line: var(--border);
+  --color-line-strong: var(--border-strong);
+
+  --color-ink: var(--text);
+  --color-muted: var(--text-muted);
+  --color-faint: var(--text-faint);
+  --color-inverted: var(--text-inverted);
+
+  --color-accent: var(--accent);
+  --color-accent-muted: var(--accent-muted);
+  --color-accent-ink: var(--accent-text);
+  --color-danger: var(--danger);
+  --color-warn: var(--warn);
+  --color-ok: var(--ok);
+
+  --radius-xs: var(--radius-xs);
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    font-family: var(--font-sans);
+    font-synthesis-weight: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    background: var(--surface);
+    color: var(--text);
+  }
+
+  body {
+    margin: 0;
+    overflow: hidden; /* the app owns its own scroll containers */
+    font-size: 13px;
+    line-height: 1.45;
+    letter-spacing: 0.002em;
+  }
+
+  /* Numbers must not jitter as they tick. */
+  :where(code, kbd, samp, .tnum) {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--accent) 30%, transparent);
+    color: var(--text);
+  }
+
+  /* One focus treatment, everywhere. The signal colour and nothing else. */
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-radius: var(--radius-xs);
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--border);
+    border: 3px solid var(--surface);
+    border-radius: var(--radius-full);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-strong);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Semantic colour routing
+ * ---------------------------------------------------------------------------
+ * Components declare *meaning* (`data-status="in_progress"`), never colour.
+ * These rules bind meaning → token by setting a local `--c`, which the chip /
+ * dot / rail primitives below consume. Adding a bd custom status is one line.
+ * ------------------------------------------------------------------------- */
+@layer components {
+  /* Fallback first — a bd custom status we don't know about still renders. */
+  [data-status] {
+    --c: var(--status-open);
+  }
+  [data-status='open'] {
+    --c: var(--status-open);
+  }
+  [data-status='in_progress'] {
+    --c: var(--status-in-progress);
+  }
+  [data-status='blocked'] {
+    --c: var(--status-blocked);
+  }
+  [data-status='deferred'] {
+    --c: var(--status-deferred);
+  }
+  [data-status='closed'] {
+    --c: var(--status-closed);
+  }
+  [data-status='pinned'] {
+    --c: var(--status-pinned);
+  }
+  [data-status='hooked'] {
+    --c: var(--status-hooked);
+  }
+  [data-priority='0'] {
+    --c: var(--priority-p0);
+  }
+  [data-priority='1'] {
+    --c: var(--priority-p1);
+  }
+  [data-priority='2'] {
+    --c: var(--priority-p2);
+  }
+  [data-priority='3'] {
+    --c: var(--priority-p3);
+  }
+  [data-priority='4'] {
+    --c: var(--priority-p4);
+  }
+
+  [data-tone='accent'] {
+    --c: var(--accent);
+  }
+  [data-tone='danger'] {
+    --c: var(--danger);
+  }
+  [data-tone='warn'] {
+    --c: var(--warn);
+  }
+  [data-tone='review'] {
+    --c: var(--label-review);
+  }
+  [data-tone='neutral'] {
+    --c: var(--text-faint);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Primitives — the small vocabulary the whole app is drawn with.
+ * ------------------------------------------------------------------------- */
+@layer components {
+  /* A 6px status disc. Hollow when the work has not started, solid once it
+     has — so a glance down the gutter reads as "how much is actually alive". */
+  .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: var(--radius-full);
+    flex: none;
+    box-shadow: inset 0 0 0 1.5px var(--c);
+  }
+  .dot[data-filled='true'] {
+    background: var(--c);
+  }
+
+  /* Chips: 11px, uppercase-adjacent tracking, tinted ground, coloured ink.
+     Because the ground is mixed *into the current surface*, chips stay legible
+     on rows, in the slide-over, and inside the scrim without extra rules. */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 16px;
+    padding: 0 5px;
+    border-radius: var(--radius-sm);
+    font-size: 10.5px;
+    line-height: 1;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    color: var(--c);
+    background: color-mix(in oklab, var(--c) var(--tint-weak), transparent);
+  }
+  .chip[data-solid='true'] {
+    background: color-mix(in oklab, var(--c) var(--tint-strong), transparent);
+  }
+  .chip[data-outline='true'] {
+    background: transparent;
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c) 35%, transparent);
+  }
+
+  /* The rail: a 2px status stripe down the left edge of every backlog row.
+     Collectively they make the table look woven, which is the whole point of
+     the name, and they carry status at zero horizontal cost. */
+  .rail {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: var(--c);
+    opacity: 0.5;
+  }
+
+  /* Micro-legend: the uppercase 10px labels in the detail sheet's left gutter
+     and above table groups. Tracking is doing the work, not weight. */
+  .legend {
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    color: var(--text-muted);
+    background: var(--surface-raised);
+    border-radius: var(--radius-sm);
+    box-shadow:
+      inset 0 0 0 1px var(--border),
+      0 1px 0 var(--border);
+  }
+
+  .hairline {
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* — Controls ————————————————————————————————————————————————————————————
+     Small, square-ish, low-contrast at rest. In an ops console the data is the
+     interface; buttons should recede until you go looking for them. */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-3);
+    height: 26px;
+    padding: 0 10px;
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text);
+    background: var(--surface-raised);
+    box-shadow: inset 0 0 0 1px var(--border);
+    transition:
+      background var(--dur-fast) var(--ease-out),
+      box-shadow var(--dur-fast) var(--ease-out);
+    cursor: pointer;
+  }
+  .btn:hover {
+    background: var(--surface-hover);
+    box-shadow: inset 0 0 0 1px var(--border-strong);
+  }
+  .btn:active {
+    background: var(--surface-active);
+  }
+
+  .btn-quiet {
+    background: transparent;
+    box-shadow: none;
+    color: var(--text-muted);
+  }
+  .btn-quiet:hover {
+    background: var(--surface-hover);
+    box-shadow: none;
+    color: var(--text);
+  }
+  .btn-quiet[aria-pressed='true'],
+  .btn-quiet[data-active='true'] {
+    background: var(--surface-active);
+    color: var(--text);
+  }
+
+  .icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-md);
+    color: var(--text-faint);
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      background var(--dur-fast) var(--ease-out);
+    cursor: pointer;
+  }
+  .icon-btn:hover {
+    color: var(--text);
+    background: var(--surface-hover);
+  }
+
+  /* Segmented control — the view switcher. One inset track, no gaps, so it
+     reads as a single instrument rather than three loose buttons. */
+  .seg {
+    display: inline-flex;
+    padding: 2px;
+    border-radius: var(--radius-md);
+    background: var(--surface-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .seg > button {
+    height: 20px;
+    padding: 0 9px;
+    border-radius: var(--radius-sm);
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--text-faint);
+    cursor: pointer;
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      background var(--dur-fast) var(--ease-out);
+  }
+  .seg > button:hover:not([aria-current='true']):not(:disabled) {
+    color: var(--text-muted);
+  }
+  .seg > button[aria-current='true'] {
+    color: var(--text);
+    background: var(--surface-raised);
+    box-shadow: var(--shadow-control);
+  }
+  .seg > button:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .field {
+    height: 26px;
+    padding: 0 8px;
+    border-radius: var(--radius-md);
+    font-size: 12px;
+    color: var(--text);
+    background: var(--surface-sunken);
+    box-shadow: inset 0 0 0 1px var(--border);
+    transition: box-shadow var(--dur-fast) var(--ease-out);
+  }
+  .field::placeholder {
+    color: var(--text-faint);
+  }
+  .field:focus {
+    outline: none;
+    box-shadow: inset 0 0 0 1px var(--accent);
+  }
+
+  /* Markdown for the four bead prose fields. Tight leading — these sit in a
+     560px sheet next to a dense table, not on a reading page. */
+  .prose-loom {
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--text-muted);
+  }
+  .prose-loom > :first-child {
+    margin-top: 0;
+  }
+  .prose-loom > :last-child {
+    margin-bottom: 0;
+  }
+  .prose-loom p,
+  .prose-loom ul,
+  .prose-loom ol,
+  .prose-loom blockquote,
+  .prose-loom pre,
+  .prose-loom table {
+    margin: 0 0 var(--space-5);
+  }
+  .prose-loom strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .prose-loom em {
+    font-style: italic;
+  }
+  .prose-loom h1,
+  .prose-loom h2,
+  .prose-loom h3,
+  .prose-loom h4 {
+    margin: var(--space-6) 0 var(--space-3);
+    color: var(--text);
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+  .prose-loom ul,
+  .prose-loom ol {
+    padding-left: var(--space-6);
+  }
+  .prose-loom ul {
+    list-style: none;
+  }
+  .prose-loom ul > li::before {
+    content: '';
+    position: absolute;
+    left: calc(var(--space-6) * -1 + 4px);
+    top: 0.62em;
+    width: 3px;
+    height: 3px;
+    border-radius: var(--radius-full);
+    background: var(--text-faint);
+  }
+  .prose-loom ul > li {
+    position: relative;
+  }
+  .prose-loom ol {
+    list-style: decimal;
+  }
+  .prose-loom li {
+    margin-bottom: var(--space-2);
+  }
+  .prose-loom a {
+    color: var(--accent);
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in oklab, var(--accent) 40%, transparent);
+  }
+  .prose-loom a:hover {
+    border-bottom-color: var(--accent);
+  }
+  .prose-loom code {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    padding: 1px 4px;
+    border-radius: var(--radius-xs);
+    background: var(--surface-raised);
+    color: var(--text);
+  }
+  .prose-loom pre {
+    padding: var(--space-5);
+    border-radius: var(--radius-md);
+    background: var(--surface-sunken);
+    border: 1px solid var(--border);
+    overflow-x: auto;
+  }
+  .prose-loom pre code {
+    padding: 0;
+    background: transparent;
+  }
+  .prose-loom blockquote {
+    padding-left: var(--space-5);
+    border-left: 2px solid var(--border-strong);
+    color: var(--text-faint);
+  }
+  .prose-loom table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+  .prose-loom th,
+  .prose-loom td {
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid var(--border);
+    text-align: left;
+  }
+  .prose-loom th {
+    color: var(--text);
+    font-weight: 600;
+    background: var(--surface-raised);
+  }
+  .prose-loom hr {
+    margin: var(--space-6) 0;
+    border: 0;
+    border-top: 1px solid var(--border);
+  }
+}
+
+@layer utilities {
+  .mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.01em;
+  }
+
+  .thread {
+    background-image: var(--thread);
+  }
+
+  /* Shimmer for loading skeletons — a thread being drawn across the loom. */
+  .shimmer {
+    background: linear-gradient(
+      90deg,
+      var(--surface-raised) 0%,
+      var(--surface-hover) 50%,
+      var(--surface-raised) 100%
+    );
+    background-size: 200% 100%;
+    animation: loom-shimmer 1.4s ease-in-out infinite;
+  }
+
+  .panel-in {
+    animation: loom-panel-in var(--dur-slow) var(--ease-out);
+  }
+  .scrim-in {
+    animation: loom-fade-in var(--dur-base) var(--ease-out);
+  }
+}
+
+@keyframes loom-shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes loom-panel-in {
+  from {
+    transform: translateX(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Indeterminate background-refetch sweep — the only thing that moves while
+   the table is otherwise still. */
+@keyframes loom-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
+@keyframes loom-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
