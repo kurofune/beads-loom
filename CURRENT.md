@@ -4,7 +4,7 @@
 **Goal:** make Loom work for any beads user before the repo goes public: a new
 `bd init` workspace reads, writes and closes, and no djinn UI shows unless the
 djinn integration is on.
-**Last change:** loom-43f landed (2ece744): the toolbar wraps to two rows instead of squeezing the project name or clipping controls; public CI pending.
+**Last change:** loom-43f landed (2ece744): the toolbar wraps to two rows instead of squeezing the project name or clipping controls; public CI green.
 
 ## State
 
