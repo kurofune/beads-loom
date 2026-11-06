@@ -4,13 +4,13 @@
 **Goal:** make Loom work for any beads user before the repo goes public: a new
 `bd init` workspace reads, writes and closes, and no djinn UI shows unless the
 djinn integration is on.
-**Last change:** loom-43f landed (2ece744): the toolbar wraps to two rows instead of squeezing the project name or clipping controls; public CI green.
+**Last change:** loom-npx: gitleaks runs in `make check` and CI over the full git history, behind a reject test.
 
 ## State
 
 - Epics closed: Foundations (loom-3ft), Board (loom-yqh), Tracker Truth
   (loom-d1q), Initiatives (loom-g1v).
-- Readiness (loom-iqo): every child closed. `scripts/check-public.sh` runs in `make check`; gitleaks does not (only `.gitleaks.toml` exists; run it by hand).
+- Readiness (loom-iqo): every child closed. `scripts/check-public.sh` and gitleaks (`make check-secrets`, full history, pinned in the Makefile) run in `make check` and CI.
 - Public CI green from the first run (42178431854); CI runs Node 24 (vitest 5 and jsdom 30 need 22.22.2+, 24.15+ or 26+).
 - Epic deferred: Runs (loom-0zj). Its external gate is gone; its work goes
   inside the djinn integration, whose backend seam now exists. loom-0zj.3 is live again.
@@ -35,7 +35,7 @@ djinn integration is on.
 
 ## Next checkpoint
 
-Launch done. Next: the 33 P3 `review-follow-up` beads, or gitleaks in `make check` and CI (not filed).
+Launch done. Next: the 33 P3 `review-follow-up` beads.
 
 ## Stop conditions
 

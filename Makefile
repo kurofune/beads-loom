@@ -21,6 +21,9 @@ VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT  ?= $(shell git rev-parse HEAD 2>/dev/null)
 DATE    ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 
+# The one pinned gitleaks version; check-secrets and its reject test both use it.
+GITLEAKS_VERSION ?= v8.21.2
+
 BUILDINFO := github.com/kurofune/beads-loom/internal/buildinfo
 LDFLAGS   := -X '$(BUILDINFO).Version=$(VERSION)' \
              -X '$(BUILDINFO).Commit=$(COMMIT)' \
@@ -30,7 +33,7 @@ LDFLAGS   := -X '$(BUILDINFO).Version=$(VERSION)' \
 RELEASE_LDFLAGS := $(LDFLAGS) -s -w
 
 .PHONY: dev dev-api dev-web build build-web build-go release test test-go test-web \
-        check check-public vet fmt seed clean version help
+        check check-public check-secrets vet fmt seed clean version help
 
 help:
 	@echo "targets:"
@@ -106,7 +109,7 @@ test-web:
 	@if [ -f $(WEB_DIR)/package.json ]; then cd $(WEB_DIR) && $(NPM) test; fi
 
 ## check — everything CI would run, backend and frontend.
-check: check-public vet test-go
+check: check-public check-secrets vet test-go
 	@if [ -f $(WEB_DIR)/package.json ]; then cd $(WEB_DIR) && $(NPM) run check; fi
 	@echo "all checks passed"
 
@@ -114,6 +117,12 @@ check: check-public vet test-go
 check-public:
 	./scripts/check-public_test.sh
 	./scripts/check-public.sh
+
+## check-secrets — no secret anywhere in the git history (gitleaks reads git log,
+## so a secret added and later deleted still fails). The reject test runs first.
+check-secrets:
+	GO=$(GO) GITLEAKS_VERSION=$(GITLEAKS_VERSION) ./scripts/check-secrets_test.sh
+	$(GO) run github.com/zricethezav/gitleaks/v8@$(GITLEAKS_VERSION) detect --no-banner --verbose --redact --source . --config .gitleaks.toml
 
 vet:
 	$(GO) vet ./...
