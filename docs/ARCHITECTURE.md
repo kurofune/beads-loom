@@ -38,11 +38,11 @@ follow along while they work.
 
 - bd v1.3.2 in server mode runs **per-project** dolt sql-servers, auto-started, on **dynamic ports**.
   The port lives in `<workdir>/.beads/dolt-server.port` (primary source; the
-  `dolt_server_port` key in metadata.json is deprecated). Examples on this machine:
-  `~/Projects/djinn` → port 3310 db `djinn`; `~/Projects/GameIdeas/Project-Pheonix` →
-  3309 db `Project_Pheonix`; this repo → `.beads/dolt-server.port`, db `loom`.
-- `~/.beads/shared-server/` (port file says 3308) exists but is STALE/down on this
-  machine. Loom must treat "server down" as a first-class, per-project degraded state.
+  `dolt_server_port` key in metadata.json is deprecated). Example: two workspaces
+  `app` and `api` get ports such as 3310 and 3309 and databases `app` and `api`;
+  this repo → `.beads/dolt-server.port`, db `loom`.
+- `~/.beads/shared-server/` can exist with a port file while its server is down.
+  Loom must treat "server down" as a first-class, per-project degraded state.
 - Database name = `dolt_database` in `<workdir>/.beads/metadata.json`.
 - Connection: MySQL wire protocol, user `root`, empty password, no TLS.
 - **Server resolution order for a local project:** read `<workdir>/.beads/dolt-server.port`
