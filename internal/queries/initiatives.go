@@ -20,6 +20,12 @@ type InitiativeRollup struct {
 	Ready          int `json:"ready"`
 	DepBlocked     int `json:"depBlocked"`
 	DeferScheduled int `json:"deferScheduled"`
+	// Chained counts descendants on either end of a blocks dependency, whatever
+	// the other end's status. It is a shape count, not a bucket: it overlaps
+	// every bucket above, and it is wider than DepBlocked because it keeps the
+	// blockers themselves and the pairs whose blocker has closed. A low Chained
+	// against a high Total says the epic is a pile, not a chain.
+	Chained int `json:"chained"`
 }
 
 // NoReceipt counts closed descendants missing their promised-vs-landed
@@ -134,13 +140,15 @@ SELECT e.id, e.title, e.status, e.priority, COALESCE(e.assignee, ''),
        SUM(CASE WHEN %s THEN 1 ELSE 0 END) AS no_receipt,
        SUM(CASE WHEN %s THEN 1 ELSE 0 END) AS no_acceptance,
        SUM(CASE WHEN %s THEN 1 ELSE 0 END) AS no_close_reason,
-       (SELECT l.label FROM labels l WHERE l.issue_id = e.id AND l.label = '%s' LIMIT 1) AS optout_label
+       (SELECT l.label FROM labels l WHERE l.issue_id = e.id AND l.label = '%s' LIMIT 1) AS optout_label,
+       SUM(CASE WHEN ch.id IS NOT NULL THEN 1 ELSE 0 END) AS chained
 FROM issues e
 JOIN epics ON epics.id = e.id
 LEFT JOIN descendants dsc ON dsc.root = e.id
 LEFT JOIN issues c ON c.id = dsc.node AND c.status <> '%s' AND %s
 LEFT JOIN ready_issues r ON r.id = c.id
 LEFT JOIN (SELECT DISTINCT issue_id FROM blocked_transitively) bt ON bt.issue_id = c.id
+LEFT JOIN %s ch ON ch.id = c.id
 %s
 GROUP BY e.id, e.title, e.status, e.priority, e.assignee, e.due_at, e.updated_at
 ORDER BY e.id`,
@@ -175,6 +183,7 @@ ORDER BY e.id`,
 		// and dilute the headline closed/total ratio.
 		StatusPinned,
 		VisiblePredicate("c"),
+		chainedTable(),
 		deferParentJoin("c", "dfp"),
 	)
 
@@ -194,6 +203,7 @@ ORDER BY e.id`,
 			due                                                                                                            sql.NullTime
 			total, closed, closedInWindow, started, ready, blocked, deferScheduled, noReceipt, noAcceptance, noCloseReason sql.NullInt64
 			optOutLabel                                                                                                    sql.NullString
+			chained                                                                                                        sql.NullInt64
 		)
 		if err := rows.Scan(
 			&initiative.ID,
@@ -215,6 +225,7 @@ ORDER BY e.id`,
 			&noAcceptance,
 			&noCloseReason,
 			&optOutLabel,
+			&chained,
 		); err != nil {
 			return nil, fmt.Errorf("scan initiative: %w", err)
 		}
@@ -229,6 +240,7 @@ ORDER BY e.id`,
 			Ready:          int(ready.Int64),
 			DepBlocked:     int(blocked.Int64),
 			DeferScheduled: int(deferScheduled.Int64),
+			Chained:        int(chained.Int64),
 		}
 		initiative.NoReceipt = NoReceipt{
 			Total:         int(noReceipt.Int64),
@@ -265,4 +277,24 @@ ORDER BY e.id`,
 		return nil, fmt.Errorf("list initiatives: %w", err)
 	}
 	return out, nil
+}
+
+// chainedTable lists the ids on either end of a blocks dependency whose other
+// end is a visible, non-pinned issue. It ignores the blocker's status on
+// purpose: Chained describes the epic's shape, so a pair whose blocker has
+// closed still counts. A derived table joined once rather than a correlated
+// EXISTS, for the reason deferredByParentTable gives. UNION, not UNION ALL, so
+// an id on several edges joins once and the descendant row does not fan out.
+func chainedTable() string {
+	return `(
+  SELECT d.issue_id AS id
+  FROM dependencies d
+  JOIN issues blocker ON blocker.id = d.depends_on_issue_id
+  WHERE d.type = 'blocks' AND blocker.status <> '` + StatusPinned + `' AND ` + VisiblePredicate("blocker") + `
+  UNION
+  SELECT d.depends_on_issue_id AS id
+  FROM dependencies d
+  JOIN issues blocked ON blocked.id = d.issue_id
+  WHERE d.type = 'blocks' AND blocked.status <> '` + StatusPinned + `' AND ` + VisiblePredicate("blocked") + `
+)`
 }

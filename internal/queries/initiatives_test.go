@@ -251,6 +251,14 @@ func (c initiativesFixtureConn) QueryContext(
 			{"epic-root", "Epic root", "open", int64(1), "", nil, now, now, int64(1), int64(0), int64(0), int64(0), int64(0), int64(0), int64(1)},
 		}}, nil
 	}
+	if c.scenario == "chained" {
+		now := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
+		return &scriptedRows{columns: initiativeColumns(), values: [][]driver.Value{
+			{"epic-root", "Epic root", "open", int64(1), "", nil, now, now,
+				int64(4), int64(1), int64(1), int64(0), int64(2), int64(1), int64(0),
+				int64(0), int64(0), int64(0), nil, int64(3)},
+		}}, nil
+	}
 	if c.scenario == "eligible" {
 		now := time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
 		return &scriptedRows{columns: initiativeColumns(), values: [][]driver.Value{
@@ -331,7 +339,7 @@ func initiativeColumns() []string {
 	return []string{
 		"id", "title", "status", "priority", "assignee", "due", "updated",
 		"last_activity", "total", "closed", "closed_in_window", "started", "ready", "dep_blocked", "defer_scheduled",
-		"no_receipt", "no_acceptance", "no_close_reason", "optout_label",
+		"no_receipt", "no_acceptance", "no_close_reason", "optout_label", "chained",
 	}
 }
 

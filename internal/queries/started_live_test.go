@@ -88,6 +88,14 @@ func (f *scratchFixture) setStatus(ctx context.Context, id, status string) {
 	}
 }
 
+// depAdd records that blocked is blocked by blocker, through the real bd binary.
+func (f *scratchFixture) depAdd(ctx context.Context, blocked, blocker string) {
+	f.t.Helper()
+	if err := f.client.DepAdd(ctx, f.workdir, blocked, blocker, "blocks"); err != nil {
+		f.t.Fatalf("make %s blocked by %s: %v", blocked, blocker, err)
+	}
+}
+
 func (f *scratchFixture) setDue(ctx context.Context, id, due string) {
 	f.t.Helper()
 	if err := f.client.Update(ctx, f.workdir, []string{id}, bdexec.UpdateFields{Due: &due}); err != nil {
