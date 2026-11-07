@@ -721,6 +721,37 @@ it('edits the title in place and saves an exact one-field patch on Enter', () =>
   expect(container.querySelector('input[aria-label="Title"]')).toBeNull()
 })
 
+it('keeps the title editor open on an Enter that confirms an IME composition', () => {
+  const container = renderDetail(epic)
+  act(() => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Edit title"]')?.click()
+  })
+  const input = typeTitle(container, '漢字の題名')
+  const composingEnters = [
+    new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true, cancelable: true }),
+    // Safari reports isComposing false on the confirming keydown, keyCode 229.
+    new KeyboardEvent('keydown', { key: 'Enter', keyCode: 229, bubbles: true, cancelable: true }),
+  ]
+  for (const composing of composingEnters) {
+    act(() => {
+      input.dispatchEvent(composing)
+    })
+    expect(composing.defaultPrevented).toBe(false)
+    expect(mocked.patchMutate).not.toHaveBeenCalled()
+    expect(container.querySelector('input[aria-label="Title"]')).toBe(input)
+  }
+
+  act(() => {
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true }))
+  })
+  expect(mocked.patchMutate).toHaveBeenCalledTimes(1)
+  expect(mocked.patchMutate).toHaveBeenCalledWith(
+    { id: epic.id, patch: { title: '漢字の題名' } },
+    expect.anything(),
+  )
+  expect(container.querySelector('input[aria-label="Title"]')).toBeNull()
+})
+
 it('saves the title from the Save button and cancels on Escape without closing the sheet', () => {
   const outer = document.createElement('div')
   const escaped = vi.fn()

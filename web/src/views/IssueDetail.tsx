@@ -819,7 +819,8 @@ function TitleEditor({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === 'Enter') {
+          const composing = event.nativeEvent.isComposing || event.keyCode === 229
+          if (event.key === 'Enter' && !composing) {
             event.preventDefault()
             onSave()
           }
