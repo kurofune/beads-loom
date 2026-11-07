@@ -18,7 +18,7 @@ function initiative(overrides: Partial<Initiative> = {}): Initiative {
     due: null,
     updated: '2026-08-10T00:00:00Z',
     lastActivity: '2026-08-10T00:00:00Z',
-    subtree: { total: 9, closed: 2, started: 1, ready: 3, depBlocked: 0, deferScheduled: 0 },
+    subtree: { total: 9, closed: 2, started: 1, ready: 3, depBlocked: 0, deferScheduled: 0, chained: 0 },
     closeEligible: false,
     health: { state: 'no-target', explanation: 'No due date — no target to assess' },
     needsTarget: true,
@@ -38,7 +38,7 @@ describe('targetNudgeReason', () => {
   it('says one descendant in the singular', () => {
     const reason = targetNudgeReason(
       initiative({
-        subtree: { total: 1, closed: 0, started: 0, ready: 1, depBlocked: 0, deferScheduled: 0 },
+        subtree: { total: 1, closed: 0, started: 0, ready: 1, depBlocked: 0, deferScheduled: 0, chained: 0 },
       }),
     )
 

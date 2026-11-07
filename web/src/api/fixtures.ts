@@ -849,6 +849,7 @@ export const mockClient: LoomClient = {
             ready: descendants.filter((child) => child.ready).length,
             depBlocked: descendants.filter((child) => child.notReady === 'deps').length,
             deferScheduled: descendants.filter((child) => child.notReady === 'deferred').length,
+            chained: descendants.filter((child) => child.depCounts.blockedBy + child.depCounts.blocks > 0).length,
           },
           closeEligible:
             epic.status !== 'closed' && descendants.length > 0 && closed === descendants.length,

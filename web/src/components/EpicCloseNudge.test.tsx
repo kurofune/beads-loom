@@ -31,7 +31,7 @@ const initiative = (id: string): Initiative => ({
   due: null,
   updated: '2026-08-01T00:00:00Z',
   lastActivity: '2026-08-02T00:00:00Z',
-  subtree: { total: 3, closed: 3, started: 0, ready: 0, depBlocked: 0, deferScheduled: 0 },
+  subtree: { total: 3, closed: 3, started: 0, ready: 0, depBlocked: 0, deferScheduled: 0, chained: 0 },
   closeEligible: true,
   needsTarget: false,
   health: { state: 'on-track', explanation: 'All descendants closed' },

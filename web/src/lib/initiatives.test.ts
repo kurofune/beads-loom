@@ -27,7 +27,7 @@ const initiative = (
   due: null,
   updated: '2026-08-01T00:00:00Z',
   lastActivity: '2026-08-01T00:00:00Z',
-  subtree: { total: 4, closed: 1, started: 0, ready: 1, depBlocked: 1, deferScheduled: 0 },
+  subtree: { total: 4, closed: 1, started: 0, ready: 1, depBlocked: 1, deferScheduled: 0, chained: 0 },
   closeEligible: false,
   needsTarget: false,
   health: { state: 'at-risk', explanation: 'fixture health' },
@@ -59,9 +59,9 @@ describe('initiative sorting', () => {
 
   it('sorts progress with childless initiatives last in both directions', () => {
     const rows = [
-      initiative('none', { subtree: { total: 0, closed: 0, started: 0, ready: 0, depBlocked: 0, deferScheduled: 0 } }),
-      initiative('half', { subtree: { total: 4, closed: 2, started: 0, ready: 1, depBlocked: 1, deferScheduled: 0 } }),
-      initiative('quarter', { subtree: { total: 4, closed: 1, started: 0, ready: 2, depBlocked: 1, deferScheduled: 0 } }),
+      initiative('none', { subtree: { total: 0, closed: 0, started: 0, ready: 0, depBlocked: 0, deferScheduled: 0, chained: 0 } }),
+      initiative('half', { subtree: { total: 4, closed: 2, started: 0, ready: 1, depBlocked: 1, deferScheduled: 0, chained: 0 } }),
+      initiative('quarter', { subtree: { total: 4, closed: 1, started: 0, ready: 2, depBlocked: 1, deferScheduled: 0, chained: 0 } }),
     ]
 
     expect(progressOf(rows[0]!)).toBeNull()

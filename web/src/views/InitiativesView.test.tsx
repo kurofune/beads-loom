@@ -68,7 +68,7 @@ const initiative = (id: string, values: Partial<Initiative> = {}): Initiative =>
   due: null,
   updated: '2026-08-01T00:00:00Z',
   lastActivity: '2026-08-02T00:00:00Z',
-  subtree: { total: 4, closed: 1, started: 0, ready: 2, depBlocked: 1, deferScheduled: 0 },
+  subtree: { total: 4, closed: 1, started: 0, ready: 2, depBlocked: 1, deferScheduled: 0, chained: 0 },
   closeEligible: false,
   needsTarget: false,
   health: { state: 'at-risk', explanation: 'closed 1 in 14d, 3 remain, due in 10d' },
@@ -148,6 +148,7 @@ async function renderInitiatives({
                 <Route path="/:project/initiatives/issue/:id" element={<InitiativesView projects={projects} />} />
                 <Route path="/:project/initiatives/:updatesId/updates" element={<InitiativesView projects={projects} />} />
                 <Route path="/:project/backlog" element={<div>Backlog route</div>} />
+                <Route path="/:project/graph" element={<div>Graph route</div>} />
               </Routes>
             </MemoryRouter>
           </IntegrationRoots>
@@ -464,7 +465,7 @@ describe('InitiativesView', () => {
   it('renders childless epics without a progress bar or rollup counts', async () => {
     const { container } = await renderView([
       initiative('empty', {
-        subtree: { total: 0, closed: 0, started: 0, ready: 0, depBlocked: 0, deferScheduled: 0 },
+        subtree: { total: 0, closed: 0, started: 0, ready: 0, depBlocked: 0, deferScheduled: 0, chained: 0 },
       }),
     ])
 
@@ -590,8 +591,8 @@ describe('InitiativesView', () => {
 
   it('sorts from the header, reverses the active key, and persists per project', async () => {
     const rows = [
-      initiative('high', { subtree: { total: 4, closed: 3, started: 0, ready: 0, depBlocked: 1, deferScheduled: 0 } }),
-      initiative('low', { subtree: { total: 4, closed: 1, started: 0, ready: 2, depBlocked: 1, deferScheduled: 0 } }),
+      initiative('high', { subtree: { total: 4, closed: 3, started: 0, ready: 0, depBlocked: 1, deferScheduled: 0, chained: 0 } }),
+      initiative('low', { subtree: { total: 4, closed: 1, started: 0, ready: 2, depBlocked: 1, deferScheduled: 0, chained: 0 } }),
     ]
     const { container } = await renderView(rows)
     const progressSort = [...container.querySelectorAll('button')].find((button) =>
@@ -697,7 +698,7 @@ describe('InitiativesView', () => {
   it('renders the subtree started count in its own cell and drills down from it', async () => {
     const { container } = await renderView([
       initiative('busy', {
-        subtree: { total: 8, closed: 2, started: 3, ready: 2, depBlocked: 1, deferScheduled: 0 },
+        subtree: { total: 8, closed: 2, started: 3, ready: 2, depBlocked: 1, deferScheduled: 0, chained: 0 },
       }),
     ])
     const startedIndex = INITIATIVE_COLUMNS.findIndex((column) => column.id === 'started')
@@ -719,13 +720,75 @@ describe('InitiativesView', () => {
   it('leaves the started cell empty when no descendant is under way', async () => {
     const { container } = await renderView([
       initiative('idle', {
-        subtree: { total: 4, closed: 0, started: 0, ready: 4, depBlocked: 0, deferScheduled: 0 },
+        subtree: { total: 4, closed: 0, started: 0, ready: 4, depBlocked: 0, deferScheduled: 0, chained: 0 },
       }),
     ])
     const startedIndex = INITIATIVE_COLUMNS.findIndex((column) => column.id === 'started')
     const cell = container
       .querySelector('[data-row="idle"]')
       ?.querySelectorAll('[role="gridcell"]')[startedIndex]
+
+    expect(cell?.textContent).toBe('')
+    expect(cell?.querySelector('button')).toBeNull()
+  })
+
+  it('places In chain after the pipeline buckets, explained in its header', async () => {
+    const ids = INITIATIVE_COLUMNS.map((column) => column.id)
+    expect(ids.indexOf('chained')).toBe(ids.indexOf('deferred') + 1)
+    expect(INITIATIVE_COLUMNS.find((column) => column.id === 'chained')?.label).toBe('In chain')
+
+    const { container } = await renderView([initiative('epic-a')])
+    const header = [...container.querySelectorAll('[role="columnheader"]')][ids.indexOf('chained')]
+    const trigger = header?.querySelector('[tabindex="0"]')
+    const tooltip = header?.querySelector('[role="tooltip"]')
+    if (!(trigger instanceof HTMLElement)) throw new Error('In chain header trigger not found')
+    expect(trigger.getAttribute('aria-describedby')).toBe(tooltip?.id)
+    // The header says what separates it from Blocked: closed blockers and the
+    // blockers themselves still count.
+    expect(tooltip?.textContent).toContain('either end of a blocks dependency')
+    expect(tooltip?.textContent).toContain('not what is blocked now')
+  })
+
+  it('renders the chained count apart from Blocked and drills to the scoped blockers graph', async () => {
+    const { container } = await renderView([
+      initiative('chainy', {
+        subtree: { total: 9, closed: 3, started: 0, ready: 4, depBlocked: 2, deferScheduled: 0, chained: 5 },
+      }),
+    ])
+    const chainedIndex = INITIATIVE_COLUMNS.findIndex((column) => column.id === 'chained')
+    const blockedIndex = INITIATIVE_COLUMNS.findIndex((column) => column.id === 'blocked')
+    const cells = container.querySelector('[data-row="chainy"]')?.querySelectorAll('[role="gridcell"]')
+    const cell = cells?.[chainedIndex]
+    if (!(cell instanceof HTMLElement)) throw new Error('chained cell not found')
+
+    expect(cell.textContent).toBe('5')
+    expect(cells?.[blockedIndex]?.textContent).toBe('2')
+    const button = cell.querySelector('button')
+    if (!(button instanceof HTMLButtonElement)) throw new Error('chained drill-down not found')
+    expect(button.getAttribute('aria-label')).toBe(
+      '5 descendants in a blocking chain; open the blockers graph for chainy',
+    )
+    // Blocked owns the blocked colour; this count must not borrow it.
+    expect(button.style.color).not.toBe('var(--status-blocked)')
+
+    act(() => button.focus())
+    expect(document.activeElement).toBe(button)
+    act(() => button.click())
+
+    // Closed issues are shown on arrival, because the count includes pairs
+    // whose blocker has closed.
+    expect(location(container)).toBe('/loom/graph?epic=chainy&closed=1')
+    expect(container.querySelector('[data-testid="issue-detail"]')).toBeNull()
+  })
+
+  it('leaves the chained cell empty when nothing in the subtree touches a blocks edge', async () => {
+    const { container } = await renderView([
+      initiative('pile', {
+        subtree: { total: 4, closed: 0, started: 0, ready: 4, depBlocked: 0, deferScheduled: 0, chained: 0 },
+      }),
+    ])
+    const chainedIndex = INITIATIVE_COLUMNS.findIndex((column) => column.id === 'chained')
+    const cell = container.querySelector('[data-row="pile"]')?.querySelectorAll('[role="gridcell"]')[chainedIndex]
 
     expect(cell?.textContent).toBe('')
     expect(cell?.querySelector('button')).toBeNull()
@@ -856,7 +919,7 @@ describe('InitiativesView', () => {
   it('lays the started segment beside the closed one without inflating progress', async () => {
     const { container } = await renderView([
       initiative('mixed', {
-        subtree: { total: 8, closed: 2, started: 4, ready: 2, depBlocked: 0, deferScheduled: 0 },
+        subtree: { total: 8, closed: 2, started: 4, ready: 2, depBlocked: 0, deferScheduled: 0, chained: 0 },
       }),
     ])
     const row = container.querySelector('[data-row="mixed"]')

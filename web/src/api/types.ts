@@ -179,6 +179,13 @@ export interface InitiativeRollup {
   ready: number
   depBlocked: number
   deferScheduled: number
+  /**
+   * Descendants on either end of a `blocks` dependency, whatever the other
+   * end's status. A shape count, not a bucket: it overlaps the others, and it
+   * is wider than depBlocked because it keeps the blockers themselves and the
+   * pairs whose blocker has closed.
+   */
+  chained: number
 }
 
 /** Missing promised-vs-landed receipts among closed transitive descendants. */

@@ -43,6 +43,8 @@ export const INITIATIVE_COLUMNS = [
   { id: 'ready', label: 'Ready', width: '64px' },
   { id: 'blocked', label: 'Blocked', width: '72px' },
   { id: 'deferred', label: 'Deferred', width: '76px' },
+  // Not a pipeline bucket: it overlaps all four, so it sits after them.
+  { id: 'chained', label: 'In chain', width: '76px' },
   { id: 'due', label: 'Due', width: '88px' },
   { id: 'assignee', label: 'Assignee', width: '112px' },
   { id: 'activity', label: 'Activity', width: '72px' },
@@ -66,6 +68,7 @@ const gridTemplate = (columns: readonly InitiativeColumn[]) => columns.map((colu
  *  two cannot drift apart. */
 const NO_RECEIPT_COUNTED_ONCE = 'a bead missing both is counted once'
 const NO_RECEIPT_RULE = `Closed descendants with no acceptance criteria or no close reason; ${NO_RECEIPT_COUNTED_ONCE}.`
+const CHAINED_RULE = 'Descendants on either end of a blocks dependency, closed blockers included: a shape count, not what is blocked now.'
 
 const ROW_H = 42
 
@@ -180,6 +183,16 @@ export function InitiativesView({ projects }: { projects: Project[] }) {
           ? `/${encodeURIComponent(projectName)}/initiatives/${encodeURIComponent(id)}/updates`
           : `/${encodeURIComponent(projectName)}/initiatives`,
       ),
+    [navigate, projectName],
+  )
+
+  const toBlockers = useCallback(
+    (id: string) => {
+      // closed=1 because the count keeps pairs whose blocker has closed; the
+      // graph hides closed issues by default and would draw fewer of them.
+      const query = new URLSearchParams({ epic: id, closed: '1' })
+      navigate(`/${encodeURIComponent(projectName)}/graph?${query.toString()}`)
+    },
     [navigate, projectName],
   )
 
@@ -302,14 +315,20 @@ export function InitiativesView({ projects }: { projects: Project[] }) {
 
     return (
       <div ref={scrollRef} className="h-full overflow-auto" role="grid" aria-label={`${projectName} initiatives`} aria-rowcount={initiatives.length}>
-        <div className="sticky top-0 z-10 grid min-w-[1326px] border-b border-line bg-surface px-4" style={{ gridTemplateColumns: grid }} role="row">
+        <div className="sticky top-0 z-10 grid min-w-[1402px] border-b border-line bg-surface px-4" style={{ gridTemplateColumns: grid }} role="row">
           {columns.map((column) => (
             <span key={column.id} className="legend flex h-7 items-center" role="columnheader">
-              {column.id === 'noReceipt' ? <NoReceiptHeader label={column.label} /> : column.label}
+              {column.id === 'noReceipt' ? (
+                <HintedHeader label={column.label} id="no-receipt-rule" hint={NO_RECEIPT_RULE} />
+              ) : column.id === 'chained' ? (
+                <HintedHeader label={column.label} id="chained-rule" hint={CHAINED_RULE} />
+              ) : (
+                column.label
+              )}
             </span>
           ))}
         </div>
-        <div className="relative min-w-[1326px]" style={{ height: virtualizer.getTotalSize() }}>
+        <div className="relative min-w-[1402px]" style={{ height: virtualizer.getTotalSize() }}>
           {virtualizer.getVirtualItems().map((item) => {
             const initiative = initiatives[item.index]
             if (!initiative) return null
@@ -326,6 +345,7 @@ export function InitiativesView({ projects }: { projects: Project[] }) {
                 }}
                 onDrillDown={() => toBacklog(initiative.id)}
                 onNoReceiptDrillDown={() => toBacklog(initiative.id, true)}
+                onChainedDrillDown={() => toBlockers(initiative.id)}
                 grid={grid}
                 showUpdates={showUpdates}
                 updates={updatesByEpic.get(initiative.id)}
@@ -404,6 +424,7 @@ function InitiativeRow({
   onOpen,
   onDrillDown,
   onNoReceiptDrillDown,
+  onChainedDrillDown,
   grid,
   showUpdates,
   updates,
@@ -419,6 +440,7 @@ function InitiativeRow({
   onOpen: () => void
   onDrillDown: () => void
   onNoReceiptDrillDown: () => void
+  onChainedDrillDown: () => void
   grid: string
   showUpdates: boolean
   /** Absent when this epic has no stored weekly updates. */
@@ -442,6 +464,11 @@ function InitiativeRow({
     event.stopPropagation()
     onNoReceiptDrillDown()
   }
+  const drillChained = (event: React.MouseEvent) => {
+    event.stopPropagation()
+    onChainedDrillDown()
+  }
+  const chained = initiative.subtree.chained
   const receiptBreakdown = `${noReceipt.noAcceptance} closed with no acceptance criteria; ${noReceipt.noCloseReason} closed with no close reason; ${NO_RECEIPT_COUNTED_ONCE}.`
   const receiptTooltipID = `no-receipt-${initiative.id}`
 
@@ -521,6 +548,19 @@ function InitiativeRow({
       <span className="mono text-muted" role="gridcell" title={initiative.subtree.deferScheduled > 0 ? 'held by schedule, not dependencies' : undefined}>
         {hasChildren && initiative.subtree.deferScheduled > 0 ? initiative.subtree.deferScheduled : ''}
       </span>
+      <span role="gridcell">
+        {hasChildren && chained > 0 && (
+          <button
+            type="button"
+            className="mono cursor-pointer rounded-sm px-1 py-1 text-ink hover:bg-active"
+            onClick={drillChained}
+            title={`${chained} of ${initiative.subtree.total} descendants sit on either end of a blocks dependency, closed blockers included; open this epic in the blockers graph`}
+            aria-label={`${chained} ${chained === 1 ? 'descendant' : 'descendants'} in a blocking chain; open the blockers graph for ${initiative.id}`}
+          >
+            {chained}
+          </button>
+        )}
+      </span>
       <span className="text-[11px]" role="gridcell" title={absoluteTime(initiative.due)} style={overdue ? { color: 'var(--danger)' } : undefined}>
         {relativeTime(initiative.due)}
       </span>
@@ -551,16 +591,16 @@ function InitiativeRow({
 
 /** The column header states the receipt rule itself, so the count means the
  *  same thing before a reader hovers any one row. */
-function NoReceiptHeader({ label }: { label: string }) {
+function HintedHeader({ label, id, hint }: { label: string; id: string; hint: string }) {
   return (
-    <span className="group relative cursor-help rounded-sm outline-offset-2" tabIndex={0} aria-describedby="no-receipt-rule">
+    <span className="group relative cursor-help rounded-sm outline-offset-2" tabIndex={0} aria-describedby={id}>
       <span className="underline decoration-dotted underline-offset-2">{label}</span>
       <span
-        id="no-receipt-rule"
+        id={id}
         role="tooltip"
         className="pointer-events-none absolute top-full left-0 z-20 mt-1 w-60 rounded-md bg-overlay px-2.5 py-2 text-left text-[11px] leading-relaxed font-normal tracking-normal text-ink normal-case opacity-0 shadow-lg ring-1 ring-line transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
       >
-        {NO_RECEIPT_RULE}
+        {hint}
       </span>
     </span>
   )

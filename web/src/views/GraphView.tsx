@@ -55,7 +55,8 @@ export function GraphView({ projects }: { projects: Project[] }) {
   const openId = params.id
   const epic = search.get('epic') ?? ''
 
-  const [includeClosed, setIncludeClosed] = useState(false)
+  // In the URL so a drill from Initiatives can land with closed issues shown.
+  const includeClosed = search.get('closed') === '1'
   const [focus, setFocus] = useState<string | null>(null)
   const [epicMenu, setEpicMenu] = useState<DOMRect | null>(null)
 
@@ -144,12 +145,15 @@ export function GraphView({ projects }: { projects: Project[] }) {
     setSearch(next, { replace: true })
   }
 
-  const toIssue = (id?: string) =>
+  const toIssue = (id?: string) => {
+    const query = search.toString()
+    const suffix = query ? `?${query}` : ''
     navigate(
       id
-        ? `/${encodeURIComponent(projectName)}/graph/issue/${encodeURIComponent(id)}${epic ? `?epic=${encodeURIComponent(epic)}` : ''}`
-        : `/${encodeURIComponent(projectName)}/graph${epic ? `?epic=${encodeURIComponent(epic)}` : ''}`,
+        ? `/${encodeURIComponent(projectName)}/graph/issue/${encodeURIComponent(id)}${suffix}`
+        : `/${encodeURIComponent(projectName)}/graph${suffix}`,
     )
+  }
 
   // Epics for the scoping picker come from the issue list, not the graph: on a
   // 413 the graph returns no nodes at all, and that is exactly the moment the
@@ -200,7 +204,12 @@ export function GraphView({ projects }: { projects: Project[] }) {
         type="button"
         className="btn btn-quiet h-[26px] text-[11.5px]"
         aria-pressed={includeClosed}
-        onClick={() => setIncludeClosed((v) => !v)}
+        onClick={() => {
+          const next = new URLSearchParams(search)
+          if (includeClosed) next.delete('closed')
+          else next.set('closed', '1')
+          setSearch(next, { replace: true })
+        }}
       >
         Closed
       </button>
