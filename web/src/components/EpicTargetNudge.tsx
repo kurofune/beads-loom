@@ -5,6 +5,7 @@ import { NO_TARGET_LABEL, targetNudgeReason } from '@/lib/target-nudge'
 import { Dialog, Field } from './Dialog'
 import { useInteractionLock } from './Live'
 import { useToast } from './Toast'
+import { isSubmitEnter } from '@/lib/enter'
 
 /**
  * The missing-target nudge: an epic that has descendants and no due date, so
@@ -182,7 +183,7 @@ export function EpicTargetPanel({
           min={dateInputValue(new Date())}
           onChange={(event) => setDue(event.target.value)}
           onKeyDown={(event) => {
-            if (event.key === 'Enter') {
+            if (isSubmitEnter(event)) {
               event.preventDefault()
               void setTarget()
             }

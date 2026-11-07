@@ -11,6 +11,7 @@ import { LabelChip } from './primitives'
 import { useLabelRules } from './labels'
 import { useToast } from './Toast'
 import { CriteriaEditor } from './CriteriaEditor'
+import { isSubmitEnter } from '@/lib/enter'
 
 const LABEL_SEEDS = [
   'phase-1',
@@ -147,7 +148,7 @@ export function QuickCreate({
         <div
           className="space-y-4"
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+            if (isSubmitEnter(e) && (e.metaKey || e.ctrlKey)) {
               e.preventDefault()
               void submit()
             }

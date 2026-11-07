@@ -37,6 +37,7 @@ import {
   statusLabel,
 } from '@/lib/beads'
 import { absoluteTime, dateOnly, relativeTime } from '@/lib/time'
+import { isSubmitEnter } from '@/lib/enter'
 
 type ProseField = 'description' | 'acceptance' | 'design' | 'notes'
 
@@ -484,7 +485,7 @@ function SheetBody({
                   event.preventDefault()
                   event.stopPropagation()
                   cancelEditor()
-                } else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+                } else if (isSubmitEnter(event) && (event.metaKey || event.ctrlKey)) {
                   event.preventDefault()
                   saveAcceptance()
                 }
@@ -723,7 +724,7 @@ function ProseTextEditor({
           event.preventDefault()
           event.stopPropagation()
           onCancel()
-        } else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) {
+        } else if (isSubmitEnter(event) && (event.metaKey || event.ctrlKey)) {
           event.preventDefault()
           onSave()
         }
@@ -819,8 +820,7 @@ function TitleEditor({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
-          const composing = event.nativeEvent.isComposing || event.keyCode === 229
-          if (event.key === 'Enter' && !composing) {
+          if (isSubmitEnter(event)) {
             event.preventDefault()
             onSave()
           }

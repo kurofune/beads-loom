@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAddComment } from '@/api/mutations'
 import { useToast } from './Toast'
+import { isSubmitEnter } from '@/lib/enter'
 
 /**
  * Comment composer.
@@ -39,7 +40,7 @@ export function CommentComposer({ project, id }: { project: string; id: string }
         aria-label="Add a comment"
         onChange={(e) => setText(e.target.value)}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+          if (isSubmitEnter(e) && (e.metaKey || e.ctrlKey)) {
             e.preventDefault()
             submit()
           }

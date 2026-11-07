@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import clsx from 'clsx'
+import { isSubmitEnter } from '@/lib/enter'
 
 /**
  * The one popover in the app.
@@ -120,6 +121,11 @@ export function Menu({
   )
 
   const onKeyDown = (event: React.KeyboardEvent) => {
+    if (isSubmitEnter(event)) {
+      event.preventDefault()
+      commit(cursor)
+      return
+    }
     switch (event.key) {
       case 'ArrowDown':
       case 'Tab':
@@ -129,10 +135,6 @@ export function Menu({
       case 'ArrowUp':
         event.preventDefault()
         setCursor((c) => (rowCount ? (c - 1 + rowCount) % rowCount : 0))
-        break
-      case 'Enter':
-        event.preventDefault()
-        commit(cursor)
         break
       case 'Escape':
         event.preventDefault()

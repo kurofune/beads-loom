@@ -11,6 +11,7 @@ import {
 } from '@/lib/palette'
 import { useRecentIssues } from '@/lib/recent'
 import { useInteractionLock } from './Live'
+import { isSubmitEnter } from '@/lib/enter'
 
 /**
  * `Cmd+K`.
@@ -99,7 +100,7 @@ export function CommandPalette({
     } else if (e.key === 'ArrowUp' || (e.key === 'p' && e.ctrlKey)) {
       e.preventDefault()
       setCursor((c) => (results.length ? (c - 1 + results.length) % results.length : 0))
-    } else if (e.key === 'Enter') {
+    } else if (isSubmitEnter(e)) {
       e.preventDefault()
       run(results[cursor])
     } else if (e.key === 'Escape') {

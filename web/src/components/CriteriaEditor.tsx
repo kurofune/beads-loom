@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, useState } from 'react'
+import { isSubmitEnter } from '@/lib/enter'
 
 /**
  * One criterion per line, enforced structurally.
@@ -76,7 +77,7 @@ export function CriteriaEditor({
               onChange={(e) => setAt(i, e.target.value)}
               aria-label={`Criterion ${i + 1}`}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey) {
+                if (isSubmitEnter(e) && !e.metaKey && !e.ctrlKey) {
                   e.preventDefault()
                   insertAfter(i)
                 } else if (e.key === 'Backspace' && line === '' && value.length > 1) {

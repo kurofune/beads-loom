@@ -11,6 +11,7 @@ import {
 } from '@/lib/saved-views'
 import { Dialog, Field } from './Dialog'
 import { useInteractionLock } from './Live'
+import { isSubmitEnter } from '@/lib/enter'
 
 /**
  * Saved views.
@@ -143,7 +144,7 @@ export function SaveViewButton({
               placeholder="My P0s, UI layer, stale…"
               onChange={(e) => setName(e.target.value)}
               onKeyDown={(e) => {
-                if (e.key === 'Enter' && name.trim()) {
+                if (isSubmitEnter(e) && name.trim()) {
                   e.preventDefault()
                   saveAndNotify(project, { ...current, name })
                   setOpen(false)

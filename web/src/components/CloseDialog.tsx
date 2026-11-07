@@ -5,6 +5,7 @@ import { useWriteBlock } from '@/api/hooks'
 import { Dialog, Field } from './Dialog'
 import { ReadOnlyNote } from './ReadOnlyBadge'
 import { useToast } from './Toast'
+import { isSubmitEnter } from '@/lib/enter'
 
 /**
  * Closing needs a reason.
@@ -155,7 +156,7 @@ export function CloseDialog({
           placeholder="fixed, wontfix, superseded by loom-x…"
           onChange={(e) => setReason(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter') {
+            if (isSubmitEnter(e)) {
               e.preventDefault()
               // With the confirm up, Enter must not send a second plain close;
               // the user answers the confirm with its own buttons.

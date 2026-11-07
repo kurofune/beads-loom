@@ -132,3 +132,52 @@ describe('QuickCreate type menu (loom-k7q)', () => {
     expect(consoleError).not.toHaveBeenCalled()
   })
 })
+
+describe('QuickCreate submit key and IME composition (loom-gkp)', () => {
+  it('creates nothing on a composing Enter, keeps the title, and creates once on the next ⌘↵', async () => {
+    const created: unknown[] = []
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input)
+        if (url.endsWith('/api/projects/loom/schema')) return reply(200, schema)
+        if (url.endsWith('/api/projects/loom/issues') && init?.method === 'POST') {
+          created.push(JSON.parse(String(init.body)))
+          return reply(200, { id: 'loom-new', title: '漢字の題名' })
+        }
+        return reply(404, { error: 'unexpected ' + url })
+      }),
+    )
+    render()
+    await flush()
+
+    const title = document.querySelector<HTMLInputElement>('[role="dialog"] input')!
+    act(() => {
+      Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(title, '漢字の題名')
+      title.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+
+    const composingEnters = [
+      new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, bubbles: true, cancelable: true }),
+      new KeyboardEvent('keydown', { key: 'Enter', isComposing: true, metaKey: true, bubbles: true, cancelable: true }),
+      // Safari reports isComposing false on the confirming keydown, keyCode 229.
+      new KeyboardEvent('keydown', { key: 'Enter', keyCode: 229, metaKey: true, bubbles: true, cancelable: true }),
+    ]
+    for (const composing of composingEnters) {
+      act(() => {
+        title.dispatchEvent(composing)
+      })
+      await flush()
+      expect(composing.defaultPrevented).toBe(false)
+      expect(created).toHaveLength(0)
+      expect(title.value).toBe('漢字の題名')
+    }
+
+    act(() => {
+      title.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', metaKey: true, bubbles: true, cancelable: true }))
+    })
+    await flush()
+    expect(created).toHaveLength(1)
+    expect(created[0]).toMatchObject({ title: '漢字の題名' })
+  })
+})
