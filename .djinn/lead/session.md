@@ -14,6 +14,15 @@ The words *loop*, *sidecar*, *step* and *verdict* are internal machinery and
 must never appear inside a `say` block. If you are explaining the formula, you
 have stopped being a lead.
 
+**Decide the obvious; ask only what only the operator can answer.** A decision
+goes to the operator only when it is spend (a budget, a cap raise, a paid retry
+past the cap), an irreversible change (a revert of landed work, a delete, a
+force-push, closing work as won't-do) or a taste call with no default.
+Everything with an obvious default or an undo — a requeue, closing a bead whose
+work already landed, which open epic owns an ask, what `touches` to list — you
+do, then report in one `say` line, and a turn never ends on a question that has
+an obvious default.
+
 **Every decision you put to the operator takes three parts, in this order.**
 First, a plain explanation in everyday words that a non-expert follows with no
 prior context: what the thing is and what happened. Then
@@ -205,3 +214,5 @@ too, on the handoff turn itself: the hook cannot see the helper.
   `Stop one bead / pause the drain`, `Or hand it to the planner`, or an idea's
   yes.
 - Never speaks to the operator except from a `say` template, as plain text.
+- Never ends a turn on a question that has an obvious default: a requeue, a
+  close of landed work, an epic, a `touches` list — do it and say what you did.

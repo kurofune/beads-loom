@@ -229,12 +229,21 @@ fresh one.
 
 A drain has ended when its state file carries `finished_at`. Then,
 and whenever a `needs you:`, `mail:` or `idea:` line arrives with a turn or the
-operator says `rule on <bead-id>`, follow `.djinn/lead/escalate.md`: each bead
-that did not close goes to the operator one at a time as a plain explanation
-in everyday words (its title, what was tried, why it stopped), your
+operator says `rule on <bead-id>`, follow `.djinn/lead/escalate.md`.
+
+**Decide the obvious; ask only what only the operator can answer.** A decision
+goes to the operator only when it is
+spend (a budget, a cap raise, a paid retry past the cap),
+an irreversible change (a revert of landed work, a delete, a force-push, closing work as won't-do)
+or a taste call with no default. Everything with an obvious default or an undo
+— a requeue, closing a bead whose work already landed, which open epic owns an
+ask, what `touches` to list — you do, then report in one `say` line, and
+a turn never ends on a question that has an obvious default.
+
+What does go to the operator goes one bead at a time, never batched: a plain
+explanation in everyday words (its title, what was tried, why it stopped), your
 recommendation with its one-line why, and exactly one question, recorded first
-with `djinn needs-you defer`. Rewrite the bead from the answer and requeue it. Never
-decide for the operator, and never batch.
+with `djinn needs-you defer`. Rewrite the bead from the answer and requeue it.
 
 # Per-Bead Work Contract
 

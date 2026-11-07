@@ -30,6 +30,37 @@ a time, never batched:
    closed` list, and read the log.
 2. Read the bead: `bd show <bead-id> --json` for the title and the acceptance
    criteria.
+**Sort the stop before any question.** First run the Already landed? check
+below: landed work is closed, never asked about. Then read why it stopped. A harness
+or environment stop with the work's commits intact is not the operator's
+decision — the bead's own work did not fail, the run around it did. These are
+harness stops, as examples:
+
+- a sandbox denial such as `fork/exec /bin/ps: operation not permitted`
+- a network or module-proxy failure
+- the worker drift guard
+- a timeout
+- a rejected push (the worker's landing push; your own push of local main in
+  the Already landed? check is ruled there)
+- a review loop exhausted on a test that passes at HEAD
+
+For a harness stop, requeue it at once with step 5's
+`bd update <bead-id> --status open --remove-label=needs-operator`, confirm with
+step 5's `bd ready` check, and report it in one block that ends with no
+question — no defer, no rewrite:
+
+```say
+<bead title> stopped for a reason outside its own work: <what stopped it, in
+everyday words>. Its work so far is kept, so I put it back in line for the next
+drain.
+```
+
+Only a stop whose fix needs spend (a budget, a cap raise, a paid retry past
+the cap), an irreversible change (a revert of landed work, a delete, a
+force-push, closing work as won't-do) or a taste call with no default goes on
+to step 3, whose defer command records it for the operator. Anything else with an obvious default
+or an undo, you do and report in one `say` line.
+
 3. Put it to the operator as a decision — **the bead's title, what was tried,
    why it stopped, your recommendation with its one-line why, and exactly one
    question.** Explain in everyday words, for someone who has never seen this
@@ -63,7 +94,7 @@ Recommendation: <what you would do> — <its one-line why>.
 <one question>?
 ```
 
-**Already landed?** Before step 4, every time, ask main whether the bead's
+**Already landed?** Before the sort and before step 4, every time, ask main whether the bead's
 work is already there: its commits' subjects end `(<bead-id>)`. A rewrite and a
 requeue on landed work make the next drain implement it all over again.
 `--grep` also matches a commit body and a subject that only mentions the id, so
@@ -94,9 +125,27 @@ git log origin/main..main --oneline --grep "(<bead-id>)" | awk -v s="(<bead-id>)
 ```
 
 Commits printed: the work is on local main only, and `git push origin main` is
-the whole fix. Push, then make the same close and the same `say`. A rejected
-push goes back to the operator as step 3's question, never a requeue. None
-printed by either: go on to step 4.
+the whole fix. Push, then make the same close and the same `say`. When that
+push of local main is rejected, read git's message before deciding anything: a
+rejection alone does not show that local main and origin have split, and only
+spend, an irreversible change or a taste call goes to the operator.
+
+- `[rejected]` with `(fetch first)` or `(non-fast-forward)`: origin moved on
+  since your fetch. Run `git pull --rebase origin main` and push again. When
+  the rebase stops on a conflict, `git rebase --abort` puts local main back as
+  it was; how two edits of the same lines should combine is a taste call, so
+  that conflict goes to the operator as step 3's question.
+- a pre-push hook refused (its own message precedes git's `failed to push`):
+  do the fix its message names when that fix has an undo (a reinstall, a
+  resync, a rerun), then push again; a fix that needs spend, an irreversible
+  change or a taste call goes to step 3's question.
+- a network or authentication failure: nothing has split and local main keeps
+  the work. Say so in one `say` line and push again next turn.
+
+Never `git push --force` to get past a rejection: a force-push is an
+irreversible change, only ever the operator's call. None printed by either: with no answer in hand yet,
+sort the stop (above); with the operator's answer in hand (`rule on`,
+`answer:`), go on to step 4.
 
 4. Take the answer and **rewrite the bead from it**. Never `bd edit` — it opens
    an editor and hangs. Write the new text to a file and pass it in:
@@ -149,7 +198,16 @@ item that newly needs the operator: `needs you: <bead-id> — <title> — bd sho
 `idea` (an idea from the planner or the muse, open or deferred), and
 `mail: <message-id> — <title> — bd show <message-id>` for any other message to
 the lead's seat. Each item arrives once. Every such line is Job 4 input: answer what the
-operator asked first, then put each item to them, one at a time, as one `say`
+operator asked first.
+
+A `needs you:` bead is sorted before any question, like any bead that did not
+close: read it with its `bd show` pointer and its log or
+`bd comments <bead-id> --json`, then run **Already landed?** and **Sort the
+stop before any question.** from the conversation above. Landed work is closed
+and a harness stop is requeued and reported with no question, each with its
+own `say` block; only a bead the sort sends to step 3 is still the operator's.
+
+Then put each remaining item to them, one at a time, as one `say`
 block: what it is and what it waits on in everyday words, your recommendation
 with its one-line why, and one question last. Read the item with its `bd show`
 pointer first; never paste its description or acceptance text into the block.

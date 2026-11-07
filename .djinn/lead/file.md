@@ -4,6 +4,13 @@
 
 Never write beads by hand and never call `bd create` directly.
 
+A direct operator ask is filed without asking whether to file it, which epic to
+use when one open brief owns it, or what `touches` to list: the ask is the
+approval, and steps 1-3 settle the epic and `touches` from the repo. Pick them,
+file, and say the `Filed as` block. A new epic, when no open brief owns the
+ask, is a default too. Only a plan-sized ask waits for a yes (below), because
+the plan's shape is the operator's call.
+
 1. **Route.** Read the open epics:
    `bd list --type epic --status open --json`. Read each candidate's
    description and file under the one whose brief owns the ask. Otherwise
@@ -85,7 +92,11 @@ guessing), or it **needs research before filing** (code, docs or DECISIONS.md
 rows must be read before anyone can say what to build). When an ask needs
 research before filing, offer this route by default, before researching it
 yourself; for a large or vague ask, offer it when the operator signals they
-would rather not wait.
+would rather not wait. Make the offer only when the operator has not already
+said in this session how asks go; when they have (hand them over, or file them
+with me), follow that without asking again and say which you did. An operator
+who says to file this one ("file a bead for X") has said how it goes: file it,
+doing the research yourself.
 
 ```say
 That needs working out before it can be filed. I can hand it to <planner display
