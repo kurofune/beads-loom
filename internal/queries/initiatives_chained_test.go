@@ -128,3 +128,69 @@ func openRecordingInitiatives(t *testing.T) *sql.DB {
 	t.Cleanup(func() { db.Close() })
 	return db
 }
+
+// TestInitiativeChainedCountsAnEdgeWhoseOtherEndIsPinned guards both edge
+// directions when the opposite endpoint is pinned. Pinned leaves the
+// descendant set, but it does not erase the edge: the blockers graph still
+// draws a pinned neighbour, so the row's in-chain count must agree with it.
+//
+//	A ── blocked by ──▶ Out (pinned)   A counts: its blocker is pinned
+//	Out (pinned) ── blocked by ──▶ B   B counts: the issue it blocks is pinned
+//	Pin (pinned, inside the epic) ── blocked by ──▶ Out
+//
+// Pin stays out of both Total and Chained, so Total = 2 and Chained = 2.
+func TestInitiativeChainedCountsAnEdgeWhoseOtherEndIsPinned(t *testing.T) {
+	db := openSeeded(t)
+	ctx := context.Background()
+	if _, err := exec.LookPath("bd"); err != nil {
+		t.Fatalf("bd is required to build the pinned-endpoint fixture: %v", err)
+	}
+
+	fixture := newScratchFixture(t, db)
+	epicID := fixture.create(ctx, "(chained-pinned epic)", "epic", "")
+	a := fixture.create(ctx, "(chained-pinned A, blocked by pinned)", "task", epicID)
+	b := fixture.create(ctx, "(chained-pinned B, blocks pinned)", "task", epicID)
+	pin := fixture.create(ctx, "(chained-pinned Pin, pinned descendant)", "task", epicID)
+	out := fixture.create(ctx, "(chained-pinned outside, pinned)", "task", "")
+	fixture.depAdd(ctx, a, out)
+	fixture.depAdd(ctx, out, b)
+	fixture.depAdd(ctx, pin, out)
+	fixture.setStatus(ctx, out, queries.StatusPinned)
+	fixture.setStatus(ctx, pin, queries.StatusPinned)
+
+	for _, id := range []string{out, pin} {
+		var status string
+		if err := db.QueryRowContext(ctx, "SELECT status FROM issues WHERE id = ?", id).Scan(&status); err != nil {
+			t.Fatalf("reading %s status: %v", id, err)
+		}
+		if status != queries.StatusPinned {
+			t.Fatalf("%s has status %q, want pinned", id, status)
+		}
+	}
+
+	got, _ := initiativeByID(t, ctx, db, epicID)
+	if got.Subtree.Total != 2 {
+		t.Fatalf("total = %d, want A and B only (Pin is pinned): %+v", got.Subtree.Total, got.Subtree)
+	}
+	if got.Subtree.Chained != 2 {
+		t.Errorf("chained = %d, want A (blocked by a pinned issue) and B (blocking a pinned issue): %+v",
+			got.Subtree.Chained, got.Subtree)
+	}
+
+	graph, err := queries.GraphFor(ctx, db, epicID, true)
+	if err != nil {
+		t.Fatalf("GraphFor: %v", err)
+	}
+	drawn := map[string]bool{}
+	for _, e := range graph.Edges {
+		if e.Type == "blocks" {
+			drawn[e.From+"->"+e.To] = true
+		}
+	}
+	for _, edge := range []string{a + "->" + out, out + "->" + b} {
+		if !drawn[edge] {
+			t.Errorf("blockers graph lacks %s, so Chained would count an edge the drill does not draw: %+v",
+				edge, graph.Edges)
+		}
+	}
+}

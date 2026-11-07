@@ -280,21 +280,24 @@ ORDER BY e.id`,
 }
 
 // chainedTable lists the ids on either end of a blocks dependency whose other
-// end is a visible, non-pinned issue. It ignores the blocker's status on
-// purpose: Chained describes the epic's shape, so a pair whose blocker has
-// closed still counts. A derived table joined once rather than a correlated
-// EXISTS, for the reason deferredByParentTable gives. UNION, not UNION ALL, so
-// an id on several edges joins once and the descendant row does not fan out.
+// end is a visible issue. It ignores the other end's status on purpose:
+// Chained describes the epic's shape, so a pair whose blocker has closed
+// still counts, and so does a pair whose other end is pinned — the blockers
+// graph draws that pinned neighbour, so the count must agree with the drill.
+// A pinned descendant itself still leaves the rollup through the descendant
+// join, not here. A derived table joined once rather than a correlated EXISTS,
+// for the reason deferredByParentTable gives. UNION, not UNION ALL, so an id
+// on several edges joins once and the descendant row does not fan out.
 func chainedTable() string {
 	return `(
   SELECT d.issue_id AS id
   FROM dependencies d
   JOIN issues blocker ON blocker.id = d.depends_on_issue_id
-  WHERE d.type = 'blocks' AND blocker.status <> '` + StatusPinned + `' AND ` + VisiblePredicate("blocker") + `
+  WHERE d.type = 'blocks' AND ` + VisiblePredicate("blocker") + `
   UNION
   SELECT d.depends_on_issue_id AS id
   FROM dependencies d
   JOIN issues blocked ON blocked.id = d.issue_id
-  WHERE d.type = 'blocks' AND blocked.status <> '` + StatusPinned + `' AND ` + VisiblePredicate("blocked") + `
+  WHERE d.type = 'blocks' AND ` + VisiblePredicate("blocked") + `
 )`
 }
