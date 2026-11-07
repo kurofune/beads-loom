@@ -12,3 +12,6 @@
 - loom-3fv: go (2-1-0).
 - loom-iyh: operator (0-3-0). Lead flagged deleting-behaviour (docs/adr/ trigger is dead only by today's data); lead voted no-go, prefers the charter naming ADRs.
 - 2026-11-07: triaged loom-gkp (go) and the 6 follow-ups (3 closed done/obsolete; 3 re-authored as loom-h4e, loom-964, loom-a7s); drain of those 4 landed (~$21). Operator approved loom-0uo: lead charter epic-closing rule edited (9bd61ab); djinn template half filed as djinn-9b9ww (operator go).
+
+## 2026-11-07 02:35 — triage
+- loom-qhb: no-go (1-2-0). Lead voted go; astra and fable voted no-go: it duplicates the weekly dolt-tend duty, and 288 of the 578 MB is .dolt/git-remote-cache, which dolt gc never compacts, so the under-500 MB criterion cannot hold. Closed declined by decide.
