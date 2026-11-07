@@ -353,6 +353,30 @@ func TestEmbeddedDoOpenFailures(t *testing.T) {
 	}
 }
 
+// dolt can report bd's lock after the open succeeded, from inside a query. That
+// is the same busy store as a locked open: ErrStoreBusy, project reachable.
+func TestEmbeddedDoQueryHitsLockIsBusy(t *testing.T) {
+	store := &recordingStore{}
+	reg := newRecordingRegistry(t, embeddedWorkdir(t, "fx"), store)
+	reg.Refresh(context.Background())
+
+	err := reg.Do(context.Background(), "fx", func(context.Context, *sql.DB) error {
+		return fmt.Errorf("issues: %w", lockedErr())
+	})
+	if !errors.Is(err, ErrStoreBusy) || !isEmbeddedLocked(err) {
+		t.Fatalf("err = %v, want ErrStoreBusy wrapping dolt's lock error", err)
+	}
+	if p, _ := reg.Get("fx"); !p.Reachable {
+		t.Fatalf("a lock hit mid-query marked the project unreachable: %q", p.Reason)
+	}
+
+	queryErr := errors.New("syntax error")
+	err = reg.Do(context.Background(), "fx", func(context.Context, *sql.DB) error { return queryErr })
+	if !errors.Is(err, queryErr) || errors.Is(err, ErrStoreBusy) {
+		t.Fatalf("err = %v, want the query's own error unchanged", err)
+	}
+}
+
 // A panic in fn still closes the database and connector before the gate
 // opens, so the shared store lock is not leaked past a recovered request and
 // the next read opens normally.

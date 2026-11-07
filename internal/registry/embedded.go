@@ -315,9 +315,10 @@ func (r *Registry) refreshEmbedded(ctx context.Context, p *project, res resolved
 }
 
 // doEmbedded runs fn against a read-only open of t that lives only for this
-// call. A store still locked after every retry returns ErrStoreBusy wrapping
-// dolt's error and leaves the project reachable: bd is writing, not gone. Any
-// other open failure marks the project unreachable.
+// call. A store still locked after every retry, or a query on it that hit the
+// lock, returns ErrStoreBusy wrapping dolt's error and leaves the project
+// reachable: bd is writing, not gone. Any other open failure marks the project
+// unreachable.
 func (r *Registry) doEmbedded(ctx context.Context, p *project, t embeddedTarget, fn func(context.Context, *sql.DB) error) error {
 	opened, err := runEmbedded(ctx, r.embeddedOpen, t, fn)
 	if err != nil && !opened {
@@ -341,6 +342,14 @@ func (r *Registry) doEmbedded(ctx context.Context, p *project, t embeddedTarget,
 		name := p.Name
 		r.mu.Unlock()
 		return fmt.Errorf("%w: %s: %s", ErrUnreachable, name, reason)
+	}
+	// dolt can also report bd's lock from inside a query on an open store; the
+	// store is just as busy as one that refused to open.
+	if err != nil && opened && ctx.Err() == nil && isEmbeddedLocked(err) {
+		r.mu.RLock()
+		name := p.Name
+		r.mu.RUnlock()
+		return fmt.Errorf("%w: %s: %w", ErrStoreBusy, name, err)
 	}
 	// An opened store has no server to lose, so a timeout here is always a
 	// slow query.
