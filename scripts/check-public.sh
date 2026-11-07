@@ -46,12 +46,17 @@ grep_tracked() {
 }
 
 symlink_targets() {
-  local entry path
+  local entry path target
   git_or_die git ls-files -s -z "${scope[@]}" >"$tmp"
   while IFS= read -r -d '' entry; do
     [ "${entry%% *}" = 120000 ] || continue
     path=${entry#*$'\t'}
-    if [ -L "$path" ]; then printf '%s:1:%s\n' "$path" "$(readlink "$path")"; fi
+    [ -L "./$path" ] || continue
+    target=$(readlink -- "./$path") || {
+      echo "check-public: readlink failed on symlink $path" >&2
+      exit 2
+    }
+    printf '%s:1:%s\n' "$path" "$target"
   done <"$tmp"
 }
 

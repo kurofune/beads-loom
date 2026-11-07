@@ -76,6 +76,18 @@ ln -s "/Users""/x/secret/config" "$repo/quote\"link"
 run_case "symlink with a quote in its name fails" 1 'quote"link:1:/Users'
 
 new_repo
+ln -s "/Users""/x/secret" "$repo/-n"
+run_case "symlink with an option-like name fails" 1 "-n:1:/Users"
+
+stub=$root/stub-bin
+mkdir -p "$stub"
+printf '#!/bin/sh\nexit 1\n' >"$stub/readlink"
+chmod +x "$stub/readlink"
+new_repo
+ln -s "../outside" "$repo/unreadable-link"
+PATH="$stub:$PATH" run_case "symlink whose target cannot be read fails" 2 "unreadable-link"
+
+new_repo
 printf 'see /Users''/x/secret\n' >"$repo/café.md"
 run_case "file with a non-ASCII name fails" 1 "café.md:1:"
 
