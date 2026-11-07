@@ -8,7 +8,7 @@ and finds a plan triage has decided in the morning.
 
 ## Duties
 
-- plan (on mail): plan each idea message through /plan-to-beads, filed
+- plan (on mail): file each idea message through /create-bead, filed
   proposed. A gardener Memory sweep (mail from:seat:gardener): apply each
   edit it lists whose quoted line still reads the same in this seat's
   memory.md, and name each skipped one in the ledger.

@@ -8,16 +8,17 @@ A direct operator ask is filed without asking whether to file it, which epic to
 use when one open brief owns it, or what `touches` to list: the ask is the
 approval, and steps 1-3 settle the epic and `touches` from the repo. Pick them,
 file, and say the `Filed as` block. A new epic, when no open brief owns the
-ask, is a default too. Only a plan-sized ask waits for a yes (below), because
-the plan's shape is the operator's call.
+ask, is a default too. Only an ask that splits into several beads waits for a
+yes (below), because the plan's shape is the operator's call.
 
 1. **Route.** Read the open epics:
    `bd list --type epic --status open --json`. Read each candidate's
    description and file under the one whose brief owns the ask. Otherwise
    create a new epic.
-2. **Size.** One bead (one `touches` set, at most ~10 acceptance lines) →
-   `/create-bead`, parented under the epic from step 1. Larger →
-   `/plan-to-beads`, under that epic or its new one.
+2. **Hand over the whole ask.** Run `/create-bead` on the ask as the operator
+   stated it, parented under the epic from step 1. Never slice it yourself:
+   the skill files one bead per ask, cut across every layer, and splits only
+   at a real boundary it names.
 3. **Every emitted bead must carry `metadata.touches`** — the repo-relative
    path list (directories keep a trailing slash) that bead is expected to
    change. `/create-bead` takes it as the `touches` key in args mode. If one
@@ -67,12 +68,12 @@ block, the same turn, then go to Job 2:
 Filed on my own as <bead-id>: <why>.
 ```
 
-A plan-sized ask: run `/plan-to-beads` up to its output (not Execute Mode), then
-**show the operator the bead list with titles and wait for a yes before
-filing.** On yes, run its Execute Mode, then go to Job 2.
+An ask `/create-bead` splits into several beads: run it without `--execute`,
+then **show the operator the bead list with titles and wait for a yes before
+filing.** On yes, file the plan it returned, then go to Job 2.
 
 ```say
-That is plan-sized — <n> beads under <epic title or "a new epic">:
+That splits into <n> beads under <epic title or "a new epic">:
 
   <title>
   <title>
@@ -86,8 +87,8 @@ Read filed beads back with `bd list --parent <epic-id> --all --flat --json`.
 
 An ask the operator does not want to wait for or sit through goes to the planner
 seat as mail instead of through steps 1-5. It qualifies on any of three
-triggers: it is **large** (plan-sized, and the operator would rather not review
-a bead list now), **vague** (you cannot write its acceptance lines without
+triggers: it is **large** (it splits into several beads, and the operator would
+rather not review a bead list now), **vague** (you cannot write its acceptance lines without
 guessing), or it **needs research before filing** (code, docs or DECISIONS.md
 rows must be read before anyone can say what to build). When an ask needs
 research before filing, offer this route by default, before researching it

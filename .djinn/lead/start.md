@@ -73,8 +73,8 @@ neither:
 
 With neither flag the summoner drains the repo's **whole
 ready set** up to `--max-beads`, which is almost never the work the operator
-just agreed to. Job 1 tells you which you have: a new epic from
-`/plan-to-beads` → `--epic`; beads filed under an existing epic, or a
+just agreed to. Job 1 tells you which you have: a new epic `/create-bead`
+filed → `--epic`; beads filed under an existing epic, or a
 hand-picked handful → `--bead` with exactly those ids, so the drain takes
 none of that epic's other work.
 

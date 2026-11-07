@@ -36,7 +36,7 @@ It answers ONLY "should this bead exist at all?" It does **NOT**:
 
 - **Refresh stale file paths.** Design `file:line` references are hints, not contracts; whoever implements the bead re-grounds them. A real premise with moved breadcrumbs is `fresh`. Do NOT emit `obsolete` merely because a cited path moved.
 - **Judge acceptance-criteria quality.** That is `ac-quality-review`, run by `/create-bead` at filing time. A bead with a real premise and vague criteria is still `fresh` here.
-- **Re-plan the work.** Whether this is the *right* work is `/plan-to-beads`'s job. This judgment only asks whether the premise the bead already states is still true.
+- **Re-plan the work.** Whether this is the *right* work is decided when it is filed (`/create-bead`). This judgment only asks whether the premise the bead already states is still true.
 
 ## Inputs
 

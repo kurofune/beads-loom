@@ -460,7 +460,7 @@ After the JSON is in your visible text, stop.
 
 This skill judges **the diff**. It does NOT:
 
-- Judge whether the bead was the right work to do (that is `/plan-to-beads`).
+- Judge whether the bead was the right work to do (that is settled at filing, by `/create-bead`).
 - Judge whether the bead's criteria are concrete enough to implement against
   (that is `/ac-quality-review`, which already ran before implementation).
 - Render the bead's final acceptance verdict (that is `/verify-acceptance`,

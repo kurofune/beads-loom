@@ -40,8 +40,8 @@ For each idea message:
 1. Read it, then the code, docs, DECISIONS.md rulings (the ruling index;
    each line links its docs/adr/ file) and open epics it touches
    (`bd list --type epic --status open --json`).
-2. Run /plan-to-beads in Execute Mode on the idea, under a new epic labelled
-   proposed, with every emitted bead labelled proposed. Everything you file
+2. Run /create-bead with --execute on the whole idea, under a new epic
+   labelled proposed, with every emitted bead labelled proposed. Everything you file
    drains only on triage's go. Also add the
    `from:seat:planner` label to the epic and every bead you file. It names the
    seat directory, planner, and never the display name `djinn theme show`
