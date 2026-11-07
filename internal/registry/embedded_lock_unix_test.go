@@ -6,6 +6,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"errors"
 	"math/rand/v2"
 	"os"
 	"path/filepath"
@@ -92,41 +93,82 @@ func TestShareLockFailsClosedOnTimeout(t *testing.T) {
 
 // bd writers hand the exclusive lock to each other with only a few
 // milliseconds between them, so a reader that polls misses the handoff. The
-// shared lock is taken as the exclusive one is released: across twenty
-// releases the median delay stays under 2ms, where a 10ms poll has a 5ms
-// median.
+// shared lock is taken as the exclusive one is released. A fixed wall-clock
+// bound would measure scheduler latency on a loaded machine, so each trial
+// races shareLock against a 10ms poller waiting on the same release at the
+// same moment: load delays both alike, and the poller's lead stays near half
+// its interval. A shareLock that polls too loses that lead.
 func TestShareLockTakesTheLockAsTheWriterReleasesIt(t *testing.T) {
 	path := lockFile(t)
-	const trials = 20
-	delays := make([]time.Duration, 0, trials)
+	const (
+		trials   = 20
+		interval = 10 * time.Millisecond
+	)
+	leads := make([]time.Duration, 0, trials)
 	for range trials {
 		release := holdExclusive(t, path)
-		acquired := make(chan time.Time, 1)
+		shared := make(chan time.Time, 1)
+		polled := make(chan time.Time, 1)
 		go func() {
 			ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 			defer cancel()
 			unlock, err := shareLock(ctx, path)
 			if err != nil {
 				t.Errorf("shareLock: %v", err)
-				acquired <- time.Time{}
+				shared <- time.Time{}
 				return
 			}
 			at := time.Now()
 			unlock()
-			acquired <- at
+			shared <- at
+		}()
+		go func() {
+			at, err := pollShare(path, rand.N(interval), interval, 2*time.Second)
+			if err != nil {
+				t.Errorf("poller: %v", err)
+			}
+			polled <- at
 		}()
 		time.Sleep(30*time.Millisecond + rand.N(10*time.Millisecond))
 		released := time.Now()
 		release()
-		at := <-acquired
-		if at.IsZero() {
+		sharedAt, polledAt := <-shared, <-polled
+		if sharedAt.IsZero() || polledAt.IsZero() {
 			t.FailNow()
 		}
-		delays = append(delays, at.Sub(released))
+		leads = append(leads, polledAt.Sub(released)-sharedAt.Sub(released))
 	}
-	slices.Sort(delays)
-	if median := delays[trials/2]; median >= 2*time.Millisecond {
-		t.Fatalf("median delay from release to shared lock = %v, want under 2ms; all: %v", median, delays)
+	slices.Sort(leads)
+	if median := leads[trials/2]; median < interval/4 {
+		t.Fatalf("median lead of shareLock over a %v poller on the same release = %v, want at least %v; all: %v",
+			interval, median, interval/4, leads)
+	}
+}
+
+// pollShare takes a shared flock on path by a non-blocking attempt every
+// interval, the first after offset, and returns when it held the lock.
+func pollShare(path string, offset, interval, budget time.Duration) (time.Time, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return time.Time{}, err
+	}
+	defer f.Close()
+	deadline := time.Now().Add(budget)
+	time.Sleep(offset)
+	for {
+		locked, err := tryShare(f)
+		if err != nil {
+			return time.Time{}, err
+		}
+		if locked {
+			at := time.Now()
+			_ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+			return at, nil
+		}
+		if time.Now().After(deadline) {
+			return time.Time{}, errors.New("the lock was never released")
+		}
+		time.Sleep(interval)
 	}
 }
 
