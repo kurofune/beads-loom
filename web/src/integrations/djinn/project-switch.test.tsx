@@ -139,4 +139,18 @@ describe('a project switch with no staging control mounted (loom-a7s)', () => {
     expect(queued(container)).toBe(true)
     expect(storedStaged()).toEqual(['shared-1'])
   })
+
+  it.each(['/now', '/now/', '/settings', '/settings/'])(
+    'keeps shared-1 staged across a visit to %s, which is under no project',
+    (path) => {
+      const container = stageInAlpha()
+
+      go(path)
+      expect(storedStaged()).toEqual(['shared-1'])
+
+      go('/alpha/graph/issue/shared-1')
+      expect(queued(container)).toBe(true)
+      expect(storedStaged()).toEqual(['shared-1'])
+    },
+  )
 })

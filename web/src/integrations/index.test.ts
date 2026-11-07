@@ -98,12 +98,18 @@ describe('routeProject (loom-a7s)', () => {
   it('names the project of a route under one, decoded', () => {
     expect(routeProject('/alpha/graph/issue/shared-1')).toBe('alpha')
     expect(routeProject('/my%20project/backlog')).toBe('my project')
-    expect(routeProject('/alpha/')).toBe('alpha')
+    expect(routeProject('/alpha/backlog/')).toBe('alpha')
   })
 
   it('names no project off a project route', () => {
     expect(routeProject('/')).toBe('')
     expect(routeProject('/now')).toBe('')
     expect(routeProject('/settings')).toBe('')
+  })
+
+  it('names no project for a global route with a trailing slash, which the router matches as the route', () => {
+    expect(routeProject('/now/')).toBe('')
+    expect(routeProject('/settings/')).toBe('')
+    expect(routeProject('/alpha/')).toBe('')
   })
 })

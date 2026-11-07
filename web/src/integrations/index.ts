@@ -186,11 +186,14 @@ export function IntegrationRoots({ children }: { children: ReactNode }): ReactNo
 
 /**
  * The project a path is under: the first segment of `/:project/<view>…`, or ''
- * for a path with no view segment (`/`, `/now`, `/settings`).
+ * for a path with no view segment. Every project route has a non-empty view
+ * segment, and the router matches a global route with a trailing slash
+ * (`/now/`, `/settings/`) as the route itself, so an empty view segment names
+ * no project either.
  */
 export function routeProject(pathname: string): string {
-  const [, project = '', view] = pathname.split('/')
-  return view === undefined ? '' : decodeURIComponent(project)
+  const [, project = '', view = ''] = pathname.split('/')
+  return view === '' ? '' : decodeURIComponent(project)
 }
 
 /**
