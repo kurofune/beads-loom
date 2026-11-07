@@ -130,19 +130,19 @@ type DjinnIntegration struct {
 }
 
 // UnmarshalYAML decodes the block and records whether the enabled key was
-// written, which a plain string cannot tell apart from an omitted key.
+// written, which a plain string cannot tell apart from an omitted key. The
+// presence check decodes the same node into a map, so a key supplied through a
+// YAML merge (<<) counts exactly as it does for the decoded value.
 func (d *DjinnIntegration) UnmarshalYAML(node *yaml.Node) error {
 	type plain DjinnIntegration
 	if err := node.Decode((*plain)(d)); err != nil {
 		return err
 	}
-	if node.Kind == yaml.MappingNode {
-		for i := 0; i+1 < len(node.Content); i += 2 {
-			if node.Content[i].Value == "enabled" {
-				d.enabledKeyPresent = true
-			}
-		}
+	var keys map[string]any
+	if err := node.Decode(&keys); err != nil {
+		return err
 	}
+	_, d.enabledKeyPresent = keys["enabled"]
 	return nil
 }
 

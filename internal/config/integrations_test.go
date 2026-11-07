@@ -173,3 +173,40 @@ func TestDjinnEnabledOmittedKeyStaysAuto(t *testing.T) {
 		})
 	}
 }
+
+func TestDjinnEnabledRejectsAnEmptyValueSuppliedByAMerge(t *testing.T) {
+	for name, djinn := range map[string]string{
+		"inline":   "  djinn: {<<: {enabled: \"\"}}\n",
+		"null":     "  djinn: {<<: {enabled: ~}}\n",
+		"sequence": "  djinn: {<<: [{}, {enabled: \"\"}]}\n",
+		"anchor":   "  base: &b {enabled: \"\"}\n  djinn:\n    <<: *b\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, _, err := loadYAML(t, "integrations:\n"+djinn+"projects:\n  - name: a\n    workdir: /tmp/a\n")
+			if err == nil {
+				t.Fatalf("Load() accepted a merged empty enabled; it must not read as auto")
+			}
+			if !strings.Contains(err.Error(), "integrations.djinn.enabled") {
+				t.Errorf("error = %q, want it to name integrations.djinn.enabled", err)
+			}
+		})
+	}
+}
+
+func TestDjinnEnabledExplicitKeyOverridesAMergedValue(t *testing.T) {
+	for name, tc := range map[string]struct{ djinn, want string }{
+		"explicit over merged empty": {"  djinn: {<<: {enabled: \"\"}, enabled: \"false\"}\n", DjinnOff},
+		"explicit after merge":       {"  djinn: {enabled: \"false\", <<: {enabled: \"\"}}\n", DjinnOff},
+		"merged valid value":         {"  djinn: {<<: {enabled: \"false\"}}\n", DjinnOff},
+	} {
+		t.Run(name, func(t *testing.T) {
+			cfg, _, err := loadYAML(t, "integrations:\n"+tc.djinn+"projects:\n  - name: a\n    workdir: /tmp/a\n")
+			if err != nil {
+				t.Fatalf("Load(): %v", err)
+			}
+			if got := cfg.DjinnMode(); got != tc.want {
+				t.Errorf("DjinnMode() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
