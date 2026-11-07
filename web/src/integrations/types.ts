@@ -96,6 +96,13 @@ export interface RootSlot extends Gated {
    * mounts the slot; the component must then touch no state outside React.
    */
   component: ComponentType<{ children: ReactNode; enabled: boolean }>
+  /**
+   * Rendered inside the router on every route, below every root, with the
+   * project the URL names ('' on a route outside any project, such as /now).
+   * It mounts whatever project is open, so it sees every project switch even
+   * where no other slot of this integration mounts.
+   */
+  route?: ComponentType<{ project: string }>
 }
 
 /** A label this integration gives meaning to; `operator` draws it as a warning. */

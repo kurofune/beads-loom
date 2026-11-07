@@ -1,4 +1,5 @@
-import { createElement, useMemo, type ReactNode } from 'react'
+import { createElement, Fragment, useMemo, type ReactNode } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useProjects } from '@/api/hooks'
 import type { IntegrationState, Project } from '@/api/types'
 import type { Shortcut } from '@/keyboard/registry'
@@ -181,6 +182,28 @@ export function IntegrationRoots({ children }: { children: ReactNode }): ReactNo
     (inner, { slot, enabled }) => createElement(slot.component, { enabled, children: inner }),
     children,
   )
+}
+
+/**
+ * The project a path is under: the first segment of `/:project/<view>…`, or ''
+ * for a path with no view segment (`/`, `/now`, `/settings`).
+ */
+export function routeProject(pathname: string): string {
+  const [, project = '', view] = pathname.split('/')
+  return view === undefined ? '' : decodeURIComponent(project)
+}
+
+/**
+ * Every registered root's route part, mounted inside the router on every
+ * route. Core mounts it once, beside the routes, so a root learns of each
+ * project switch whatever view is open.
+ */
+export function IntegrationRoutes(): ReactNode {
+  const project = routeProject(useLocation().pathname)
+  return registeredIntegrations().map((i) => {
+    const route = i.root?.route
+    return route ? createElement(Fragment, { key: i.id }, createElement(route, { project })) : null
+  })
 }
 
 /**

@@ -113,17 +113,26 @@ export function useStageInto(project: string, issues: readonly Pick<Issue, 'id' 
 }
 
 /**
- * The tray as `project` sees it. Switching projects starts a fresh tray: ids
- * mean nothing in another project's id space. Every surface that shows the
- * queue binds it here, so a route with no workspace (the graph's issue sheet)
- * resets it as a workspace does, and the render before that reset lands shows
- * the other project's queue as empty rather than as this project's.
+ * Switching projects starts a fresh tray: ids mean nothing in another
+ * project's id space. djinn's route part, so it runs on every route under a
+ * project whether or not anything of djinn's mounts there — a trip through a
+ * project without djinn still resets the queue. Off any project (/now,
+ * /settings) the queue is left alone.
+ */
+export function TrayRoute({ project }: { project: string }) {
+  const { trayDispatch } = useTray()
+  useEffect(() => {
+    if (project !== '') trayDispatch({ type: 'project', project })
+  }, [project, trayDispatch])
+  return null
+}
+
+/**
+ * The tray as `project` sees it. The render before TrayRoute's reset lands
+ * shows another project's queue as empty rather than as this project's.
  */
 function useProjectTray(project: string): { tray: TrayState; trayDispatch: Dispatch<TrayAction> } {
   const { tray, trayDispatch } = useTray()
-  useEffect(() => {
-    trayDispatch({ type: 'project', project })
-  }, [project, trayDispatch])
   const scoped = useMemo(
     () => (tray.project === project ? tray : { ...emptyTray, project }),
     [project, tray],
@@ -169,8 +178,6 @@ const NOTHING: WorkspaceExtension = {
 export function useDjinnWorkspace(host: WorkspaceHost, enabled: boolean): WorkspaceExtension {
   const { project, issues, targets, onOpenIssue, floating } = host
   const navigate = useNavigate()
-  // Bound with or without djinn, so a queue never survives a trip through a
-  // project that cannot show it.
   const { tray, trayDispatch } = useProjectTray(project)
   const stage = useStageInto(project, issues)
   const [summoning, setSummoning] = useState(false)

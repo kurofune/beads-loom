@@ -8,7 +8,7 @@ import type { Project } from '@/api/types'
 import { LabelRulesProvider } from '@/components/labels'
 import { LiveProvider } from '@/components/Live'
 import { ToastProvider } from '@/components/Toast'
-import { IntegrationRoots, mountIntegrations } from '@/integrations'
+import { IntegrationRoots, IntegrationRoutes, mountIntegrations } from '@/integrations'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
@@ -70,6 +70,7 @@ export async function renderWithProjects(
           <LiveProvider>
             <IntegrationRoots>
               <MemoryRouter initialEntries={[path]}>
+                <IntegrationRoutes />
                 <LabelRulesProvider rules={rules}>{ui}</LabelRulesProvider>
               </MemoryRouter>
             </IntegrationRoots>

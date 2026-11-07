@@ -34,7 +34,7 @@ import { applyTheme, currentTheme, nextTheme, type ThemeId } from '@/lib/theme'
 import { resolveStartProject } from '@/lib/settings'
 import { applyProjectOrder, moveProject, projectOrder, setProjectOrder } from '@/lib/project-order'
 import { portableView, type ViewKind } from '@/lib/views'
-import { commandActions, IntegrationRoots, useIntegrations, useViewPaths } from '@/integrations'
+import { commandActions, IntegrationRoots, IntegrationRoutes, useIntegrations, useViewPaths } from '@/integrations'
 import type { ShortcutHandlers } from '@/keyboard/registry'
 
 const queryClient = new QueryClient({
@@ -309,6 +309,9 @@ export default function App() {
               navigation — a route swap unmounts the view, not djinn's queue. */}
           <IntegrationRoots>
             <Router>
+              {/* Each root's route part, outside the routes, so it sees every
+                  project switch whatever view is open. */}
+              <IntegrationRoutes />
               <Shell />
             </Router>
           </IntegrationRoots>

@@ -7,6 +7,7 @@ import {
   StageBulkAction,
   StageIssueAction,
   TrayProvider,
+  TrayRoute,
   useDjinnWorkspace,
 } from './staging'
 
@@ -49,7 +50,7 @@ export const djinn: Integration = {
   // Spend is summed from run history.
   statTiles: [{ id: 'spend', component: SpendTile, capability: CAP_RUNS }],
 
-  root: { component: TrayProvider },
+  root: { component: TrayProvider, route: TrayRoute },
 
   labels: [
     {

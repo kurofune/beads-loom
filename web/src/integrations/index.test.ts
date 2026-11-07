@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { testProject } from '@/test/projects'
-import { integrationRoots, mountIntegrations, registeredIntegrations, streamSlots } from '.'
+import { integrationRoots, mountIntegrations, registeredIntegrations, routeProject, streamSlots } from '.'
 import type { Integration, RootSlot, SseSlot } from './types'
 
 const Noop = () => null
@@ -91,5 +91,19 @@ describe('app-wide slots: roots and stream', () => {
     const ungated: Integration = { ...fake, root: { component: Root }, sse }
     expect(integrationRoots([seeOnly], [ungated])).toEqual([{ slot: ungated.root, enabled: true }])
     expect(streamSlots([seeOnly], [ungated])).toEqual([sse])
+  })
+})
+
+describe('routeProject (loom-a7s)', () => {
+  it('names the project of a route under one, decoded', () => {
+    expect(routeProject('/alpha/graph/issue/shared-1')).toBe('alpha')
+    expect(routeProject('/my%20project/backlog')).toBe('my project')
+    expect(routeProject('/alpha/')).toBe('alpha')
+  })
+
+  it('names no project off a project route', () => {
+    expect(routeProject('/')).toBe('')
+    expect(routeProject('/now')).toBe('')
+    expect(routeProject('/settings')).toBe('')
   })
 })

@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { DiscoveryStatus } from '@/api/types'
 import { PROJECT_SNIPPET } from '@/components/NoProjectsFound'
-import { IntegrationRoots } from '@/integrations'
+import { IntegrationRoots, IntegrationRoutes } from '@/integrations'
 import App from './App'
 
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
@@ -35,6 +35,12 @@ describe('App wiring (loom-p95)', () => {
     // renders every registered root around its children (integrations tests).
     expect(path).not.toBeNull()
     expect(path).toContain(IntegrationRoots)
+  })
+
+  it('mounts the roots\' route parts inside the router, so djinn sees every project switch (loom-a7s)', () => {
+    const path = pathTo(App(), IntegrationRoutes)
+    expect(path).not.toBeNull()
+    expect(path).toContain(BrowserRouter)
   })
 })
 
