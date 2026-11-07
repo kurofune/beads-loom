@@ -141,3 +141,35 @@ func TestNegativeDjinnKnobsFailLoad(t *testing.T) {
 		}
 	}
 }
+
+func TestDjinnEnabledRejectsAnExplicitEmptyValue(t *testing.T) {
+	for _, blank := range []string{`""`, `''`, ``, `~`, `null`} {
+		t.Run(blank, func(t *testing.T) {
+			_, path, err := loadYAML(t, "integrations:\n  djinn:\n    enabled: "+blank+
+				"\nprojects:\n  - name: a\n    workdir: /tmp/a\n")
+			if err == nil {
+				t.Fatalf("Load() accepted enabled: %s; an explicit empty value must not read as auto", blank)
+			}
+			if !strings.Contains(err.Error(), "integrations.djinn.enabled") {
+				t.Errorf("error = %q, want it to name integrations.djinn.enabled", err)
+			}
+			if !strings.Contains(err.Error(), path) {
+				t.Errorf("error = %q, want it to carry the config path", err)
+			}
+		})
+	}
+}
+
+func TestDjinnEnabledOmittedKeyStaysAuto(t *testing.T) {
+	for _, head := range []string{"", "integrations:\n  djinn: {}\n", "integrations: {}\n"} {
+		t.Run(head, func(t *testing.T) {
+			cfg, _, err := loadYAML(t, head+"projects:\n  - name: a\n    workdir: /tmp/a\n")
+			if err != nil {
+				t.Fatalf("Load() with no integrations.djinn.enabled key: %v", err)
+			}
+			if got := cfg.DjinnMode(); got != DjinnAuto {
+				t.Errorf("DjinnMode() = %q, want %q", got, DjinnAuto)
+			}
+		})
+	}
+}

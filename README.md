@@ -449,7 +449,8 @@ integrations:                   # global switches for optional integrations
 ```
 
 Validation rejects a negative `max_workers` or `max_beads` and an
-`integrations.djinn.enabled` other than `auto`, `true` or `false`.
+`integrations.djinn.enabled` other than `auto`, `true` or `false`, including an
+explicit empty value (`enabled: ""` or a bare `enabled:`). Omit the key for `auto`.
 
 API:
 

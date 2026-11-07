@@ -121,8 +121,29 @@ type Integrations struct {
 // true or false. auto and true both turn the integration on, and each
 // project's capabilities still depend on what that project has; false turns
 // off its routes, watchers and capabilities everywhere.
+// An omitted enabled key means auto; a key present with an empty or null value
+// is a load error, because an operator who blanks it means off, not auto.
 type DjinnIntegration struct {
 	Enabled string `yaml:"enabled,omitempty"`
+
+	enabledKeyPresent bool
+}
+
+// UnmarshalYAML decodes the block and records whether the enabled key was
+// written, which a plain string cannot tell apart from an omitted key.
+func (d *DjinnIntegration) UnmarshalYAML(node *yaml.Node) error {
+	type plain DjinnIntegration
+	if err := node.Decode((*plain)(d)); err != nil {
+		return err
+	}
+	if node.Kind == yaml.MappingNode {
+		for i := 0; i+1 < len(node.Content); i += 2 {
+			if node.Content[i].Value == "enabled" {
+				d.enabledKeyPresent = true
+			}
+		}
+	}
+	return nil
 }
 
 // DjinnMode returns integrations.djinn.enabled, defaulting to auto.
@@ -316,6 +337,10 @@ func parse(data []byte, path string) (*Config, error) {
 }
 
 func (c *Config) validate(label string) error {
+	if d := c.Integrations; d != nil && d.Djinn != nil && d.Djinn.enabledKeyPresent && d.Djinn.Enabled == "" {
+		return fmt.Errorf("config %s: integrations.djinn.enabled is empty; set it to %q, %q or %q, or remove the key for %q",
+			label, DjinnAuto, DjinnOn, DjinnOff, DjinnAuto)
+	}
 	switch mode := c.DjinnMode(); mode {
 	case DjinnAuto, DjinnOn, DjinnOff:
 	default:
