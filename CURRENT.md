@@ -1,21 +1,20 @@
 # CURRENT — Loom
 
-**Mode:** public launch.
-**Goal:** make Loom work for any beads user before the repo goes public: a new
-`bd init` workspace reads, writes and closes, and no djinn UI shows unless the
-djinn integration is on.
-**Last change:** loom-npx: gitleaks runs in `make check` and CI over the full git history, behind a reject test.
+**Mode:** post-launch.
+**Goal:** keep Loom working for any beads user: public CI green, review follow-ups worked down.
+**Last change:** readiness epic loom-iqo closed; the stranger walk (loom-z7d) added title editing to the issue sheet (a5d0c16).
 
 ## State
 
 - Epics closed: Foundations (loom-3ft), Board (loom-yqh), Tracker Truth
-  (loom-d1q), Initiatives (loom-g1v).
-- Readiness (loom-iqo): every child closed. `scripts/check-public.sh` and gitleaks (`make check-secrets`, full history, pinned in the Makefile) run in `make check` and CI.
+  (loom-d1q), Initiatives (loom-g1v), Readiness (loom-iqo).
+- `scripts/check-public.sh` and gitleaks (`make check-secrets`, full history, pinned in the Makefile) run in `make check` and CI.
 - Public CI green from the first run (42178431854); CI runs Node 24 (vitest 5 and jsdom 30 need 22.22.2+, 24.15+ or 26+).
 - Epic deferred: Runs (loom-0zj). Its external gate is gone; its work goes
   inside the djinn integration, whose backend seam now exists. loom-0zj.3 is live again.
 - Graph: closed. Open spin-off: loom-pks (Initiatives chained count, P4).
-- 33 ready beads carry `review-follow-up`, all P3. They wait behind readiness.
+- 33 ready beads carry `review-follow-up`, all P3.
+- loom-gkp (P2, `proposed`, in triage): an Enter that confirms an IME composition submits fields app-wide; only the title editor guards it.
 - Settled surfaces, each ruled in DECISIONS.md — do not relitigate without new
   evidence: the 200-row ceiling (loom-jhd/7qh/nlm), Backlog paging by reachable
   rows (loom-rz0), the timeline reading `events` (loom-rs5), rollup cost
@@ -35,7 +34,7 @@ djinn integration is on.
 
 ## Next checkpoint
 
-Launch done. Next: the 33 P3 `review-follow-up` beads.
+Next: loom-gkp once triage approves it, then the 33 P3 `review-follow-up` beads.
 
 ## Stop conditions
 
