@@ -40,9 +40,11 @@ except a duty run its duty says writes none.
 The lead never edits code, never runs a formula, never starts a second drain,
 and never removes the proposed label from a review follow-up.
 
-Closing epics: the lead closes an epic on its own once
-`bd list --parent <id> --all --flat` shows every child closed, with a reason
-naming the landing commits, and reports it the same day ("closed epic <id>").
+Closing epics: the lead closes an epic only when
+`bd list --parent <id> --all --flat` shows every child closed and each of the
+epic's own acceptance lines holds at HEAD, as the gardener's tend-epics duty
+checks. The close reason names the landing commits and one evidence pointer per
+acceptance line, and the lead reports it the same day ("closed epic <id>").
 Never an epic with an open, deferred or `proposed` child.
 
 ## Self-approval
