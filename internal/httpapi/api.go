@@ -387,7 +387,7 @@ const ErrCodeQueryTimeout = "query_timeout"
 // writeRegistryError maps registry and query failures onto status codes:
 // an unknown project is the client's mistake (404), an unreachable dolt server
 // is ours to report as a temporary outage (503), an embedded store bd is
-// still writing is a 503 with Retry-After, which the web client retries, and a
+// still writing is a 503 with Retry-After, which the UI shows with a Retry, and a
 // query that ran out of time on a live server is a 504 query_timeout, which
 // the UI shows inline rather than as an outage.
 func (s *Server) writeRegistryError(w http.ResponseWriter, project string, err error) {

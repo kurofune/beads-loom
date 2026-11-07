@@ -66,8 +66,11 @@ follow along while they work.
   between queued bd writers and returned 500. An open that dolt
   reports as "locked by another dolt process" is retried at most 5 times (<2s).
   A read that still finds the store locked when the 1.5s open budget ends gets
-  `registry.ErrStoreBusy`; the API answers it with **503 and `Retry-After: 1`**,
-  never 500, and the project stays reachable. The web client retries 5xx.
+  `registry.ErrStoreBusy`, and so does a query that dolt fails with the same
+  lock error after the open succeeded; the API answers it with **503 and
+  `Retry-After: 1`**, never 500, and the project stays reachable. The web client
+  does not retry it on its own: the view shows the HTTP 503 error state with a
+  Retry button, and the next SSE change refetches it.
   The SSE prober stats `.dolt/noms/manifest` (bd rewrites it on every write) and
   runs `dolt_hashof_db()` only when the manifest changes. `bd sql` and `bd serve`
   refuse embedded mode, so the driver is the only read path. Writes stay with `bd`.
