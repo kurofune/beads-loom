@@ -48,6 +48,11 @@ Prune the idle backlog, then tend the beads that failed on bead quality.
    Add the `from:seat:gardener` label to every replacement bead. It names the
    seat directory, gardener, and never the display name `djinn theme show`
    prints for this seat.
+   Before the first replacement, run
+   `djinn garden survey --bed docs --json --max 0` and read only its
+   `throughput` field (the most proposals this run may file). File no more
+   replacements than that `throughput` allows; a bead past it stays deferred,
+   its original open, until the next run.
    Leave every other deferred bead as it is: it waits on the operator.
 3. Write one dated ledger entry: the reaper's summary line, then one line per
    replacement (original id -> replacement id).
@@ -125,6 +130,14 @@ Every bead you file carries the `proposed` and `from:seat:gardener` labels.
 The `from:seat:gardener` label names the seat directory, gardener, and never
 the display name `djinn theme show` prints for this seat.
 
+Every bead you file in steps 1b, 3, 4 and 5 counts against one cap: the
+`throughput` field `djinn garden survey --bed workshop --json` prints (the
+most proposals this run may file). Before step 1, run
+`djinn garden survey --bed workshop --json --max 0` and note `throughput`;
+count down one for each bead filed. Each filed bead is an open gardener bead,
+so step 2's survey already prints the cap less step 1b's filings. A comment on
+an open bead files nothing and costs nothing.
+
 1. Slow tier: run `djinn slow-watch`. When it exits 0 it prints one line: the
    log path of the latest finished slow-tier run (go test -tags=slow ./...),
    which failed and has not been handed off. When it exits 1, or prints no log
@@ -141,7 +154,9 @@ the display name `djinn theme show` prints for this seat.
       `proposed`, `from:seat:gardener` and `garden:slow-tier`: the failing
       package and test, the log's failure lines as evidence, and an
       acceptance criterion that `go test -tags=slow -run '<TestName>' <package>`
-      exits 0.
+      exits 0. File no more breaks than the survey's `throughput` allows; when
+      a break is past it, skip step 1c, so the run stays unmarked and its
+      breaks are reported next time.
    c. Run `djinn slow-watch --handed-off <log path>` with the exact log path
       step 1 printed. It marks only that run; a newer run that has finished
       red since stays unmarked and is reported next time.
@@ -187,7 +202,9 @@ the display name `djinn theme show` prints for this seat.
    `scripts/sync-vendored-skills.sh --sha <new-sha> <skill>`, then
    `go run ./cmd/djinn-gen-adapters --theme djinn --adapter claude-code`; its
    acceptance criteria are that core/vendor/<skill>.pin names
-   `commit=<new-sha>` and `go test -short ./...` exits 0.
+   `commit=<new-sha>` and `go test -short ./...` exits 0. File no more bump
+   beads than what is left of the survey's `throughput`; a moved skill past it
+   waits for the next run.
 5. Dolt store: run `djinn dolt-tend`. Exit 1: nothing failed (it ran
    successfully and wrote its own ledger entry, or had nothing to do); file
    nothing. Exit 0: it prints `dolt-tend:` lines naming the failing command
@@ -199,7 +216,10 @@ the display name `djinn theme show` prints for this seat.
    nothing. Otherwise file one bead through /create-bead, labelled `proposed`,
    `from:seat:gardener` and `garden:dolt-tend`: the printed lines verbatim as
    evidence, and an acceptance criterion that `djinn dolt-tend` on a quiet
-   repo exits 1 and appends a dolt-tend entry to this ledger. Then run
+   repo exits 1 and appends a dolt-tend entry to this ledger. File it only
+   when some of the survey's `throughput` is left; when none is, file
+   nothing and skip `--handed-off`, so the failure stays pending for the next
+   run. Then run
    `djinn dolt-tend --handed-off`, only after the comment or bead exists.
    Never run `bd gc`, and never run `bd dolt stop` or `dolt gc` yourself.
 6. Write one dated ledger entry: the slow-tier run you handed off (or none),
@@ -358,9 +378,12 @@ the workarounds the seats keep repeating, and propose one fix for each.
    - A workaround bead names the tool behaviour to fix in code and cites the
      memory lines. It carries no criterion that edits a memory.md: once the
      fix lands, the next tend-seats run finds those lines stale.
-   At most 5 beads per run, one cap shared by contradictions, workarounds
-   and step 5's bd-memory findings: find those before filing here; a
-   finding past the cap waits for next week.
+   Before filing, run `djinn garden survey --bed docs --json --max 0` and
+   read only its `throughput` field (the most proposals this run may file).
+   File no more beads than that `throughput` allows, and never more than 5
+   per run: one cap shared by contradictions, workarounds and step 5's
+   bd-memory findings. Find those before filing here; a finding past the cap
+   waits for next week.
    Add the `from:seat:gardener` label to every bead you file. It names the
    seat directory, gardener, and never the display name `djinn theme show`
    prints for this seat.
