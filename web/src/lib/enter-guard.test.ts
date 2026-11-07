@@ -33,7 +33,7 @@ function rawEnterChecks(file: string, text: string): string[] {
       starts.add(text.slice(0, match.index).split('\n').length - 1)
     }
   }
-  return [...starts].sort((a, b) => a - b).map((i) => `${file}:${i + 1}: ${lines[i].trim()}`)
+  return [...starts].sort((a, b) => a - b).map((i) => `${file}:${i + 1}: ${(lines[i] ?? '').trim()}`)
 }
 
 describe('Enter handlers go through isSubmitEnter (loom-gkp)', () => {
