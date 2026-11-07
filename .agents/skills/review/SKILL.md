@@ -67,6 +67,13 @@ The invoker provides:
    half of this review; see "Answering the previous iteration" below. On
    iteration 1 neither block is present and there is nothing to answer.
 
+4. **The bead's comments, under `## Evidence on the bead`** — every comment on
+   the bead, oldest first, each a `### <author> <time>` heading over its body,
+   read by the invoker when it built this prompt. Proof a worker posted as a
+   bead comment (timings, capture paths, measurement runs) lives here, and
+   so do the harness's `djinn-evidence` records of earlier passes. The block is
+   absent when the bead has no comments.
+
 If the prompt carries no `<bead>` block, stop and say so — a review with no
 acceptance criteria in hand cannot be scored.
 
@@ -187,8 +194,10 @@ Assign every finding a severity:
   run no `bd` command for it. Look for the capture only where the invoker
   points you — the capture files the diff commits, capture artifacts in the
   worktree (`.playwright-cli/`, a saved `tmux capture-pane` text) that the
-  diff or the invoker's prompt names, and any implementer report or prior
-  evidence the invoker pasted into your prompt. Open each one yourself; a
+  diff or the invoker's prompt names, any implementer report or prior
+  evidence the invoker pasted into your prompt, and the prompt's
+  `## Evidence on the bead` block with every capture path a comment there
+  names. Open each one yourself; a
   golden file alone is not the capture, and a capture no supplied source
   reaches counts as missing.
   Record each capture and its per-element comparison in that criterion's
@@ -365,7 +374,12 @@ Field contract:
   1-based line number among those; `status` is exactly `pass`, `partial` or
   `fail` (lowercase); `file` and `line` cite the code or test that satisfies
   the criterion (for a `fail`, where the work belongs); `note` says in one
-  sentence what you observed there. The harness copies each row onto the bead
+  sentence what you observed there. Before you mark a criterion `partial` or
+  `fail` because it says `recorded in the evidence comment` or names a capture
+  or measurement, open the prompt's `## Evidence on the bead` block and judge
+  what its comments record; run no `bd` command for it. Proof found only there
+  passes the criterion when it shows what the criterion asks, and the `note`
+  names the comment (author and time). The harness copies each row onto the bead
   as its per-criterion evidence record and sets `evidence_failed` to the count
   of rows that are not `pass`. A sidecar missing a row for any line is refused
   and the review re-runs — walk every line, including the ones about docs,
