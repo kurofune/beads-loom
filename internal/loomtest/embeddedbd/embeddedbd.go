@@ -28,8 +28,12 @@ import (
 const Prefix = "fx"
 
 // commandTimeout bounds one bd invocation. bd waits on the embedded store's
-// lock rather than failing, so a wedged peer shows up as this timeout.
-const commandTimeout = 2 * time.Minute
+// lock rather than failing, so a wedged peer shows up as this timeout. The
+// lock grants no order, so one bd in a test's writer pool can wait behind every
+// other writer: under a full parallel `go test ./...` a write takes about 6s,
+// and 20 queued writers ran past 2 minutes. 5 minutes covers that queue and
+// stays under go test's 10-minute package timeout.
+const commandTimeout = 5 * time.Minute
 
 // Workspace is one temp-dir embedded beads workspace.
 type Workspace struct {
