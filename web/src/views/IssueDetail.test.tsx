@@ -107,7 +107,7 @@ it('shows epic health with the server explanation as visible detail text', () =>
   expect(section.textContent).toContain(explanation)
 })
 
-it('shows an always-visible edit affordance for every prose section', () => {
+it('shows an always-visible edit affordance for the title and every prose section', () => {
   mocked.detail = epic
   const container = document.createElement('div')
   document.body.append(container)
@@ -125,7 +125,7 @@ it('shows an always-visible edit affordance for every prose section', () => {
     [...container.querySelectorAll<HTMLButtonElement>('button[aria-label^="Edit "]')].map(
       (button) => button.getAttribute('aria-label'),
     ),
-  ).toEqual(['Edit description', 'Edit acceptance', 'Edit design', 'Edit notes'])
+  ).toEqual(['Edit title', 'Edit description', 'Edit acceptance', 'Edit design', 'Edit notes'])
 })
 
 it('opens the description editor with the literal raw markdown source', () => {
@@ -676,4 +676,122 @@ it('saves an exact-field patch on Cmd+Enter', () => {
     { id: epic.id, patch: { notes: 'command-key draft' } },
     expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
   )
+})
+
+function renderDetail(detail: Detail) {
+  mocked.detail = detail
+  const container = document.createElement('div')
+  document.body.append(container)
+  root = createRoot(container)
+  act(() => {
+    root?.render(
+      <ToastProvider>
+        <IssueDetail project="loom" id={detail.id} onClose={vi.fn()} onNavigate={vi.fn()} />
+      </ToastProvider>,
+    )
+  })
+  return container
+}
+
+function typeTitle(container: HTMLElement, value: string) {
+  const input = container.querySelector<HTMLInputElement>('input[aria-label="Title"]')
+  if (!input) throw new Error('Title editor not found')
+  act(() => {
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set?.call(input, value)
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+  })
+  return input
+}
+
+it('edits the title in place and saves an exact one-field patch on Enter', () => {
+  const container = renderDetail(epic)
+  act(() => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Edit title"]')?.click()
+  })
+  const input = typeTitle(container, '  Renamed from the sheet  ')
+  expect(document.activeElement).toBe(input)
+  act(() => {
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+  })
+
+  expect(mocked.patchMutate).toHaveBeenCalledWith(
+    { id: epic.id, patch: { title: 'Renamed from the sheet' } },
+    expect.objectContaining({ onSuccess: expect.any(Function), onError: expect.any(Function) }),
+  )
+  expect(container.querySelector('input[aria-label="Title"]')).toBeNull()
+})
+
+it('saves the title from the Save button and cancels on Escape without closing the sheet', () => {
+  const outer = document.createElement('div')
+  const escaped = vi.fn()
+  outer.addEventListener('keydown', escaped)
+  document.body.append(outer)
+  const container = renderDetail(epic)
+  outer.append(container)
+
+  act(() => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Edit title"]')?.click()
+  })
+  const input = typeTitle(container, 'discarded')
+  act(() => {
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))
+  })
+  expect(container.querySelector('input[aria-label="Title"]')).toBeNull()
+  expect(escaped).not.toHaveBeenCalled()
+  expect(mocked.patchMutate).not.toHaveBeenCalled()
+  expect(container.querySelector('h2')?.textContent).toBe(epic.title)
+
+  act(() => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Edit title"]')?.click()
+  })
+  expect(container.querySelector<HTMLInputElement>('input[aria-label="Title"]')?.value).toBe(epic.title)
+  typeTitle(container, 'Saved by button')
+  act(() => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Save title"]')?.click()
+  })
+  expect(mocked.patchMutate).toHaveBeenCalledWith(
+    { id: epic.id, patch: { title: 'Saved by button' } },
+    expect.anything(),
+  )
+})
+
+it('sends no patch for a blank or unchanged title', () => {
+  const container = renderDetail(epic)
+  act(() => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Edit title"]')?.click()
+  })
+  const blank = typeTitle(container, '   ')
+  act(() => {
+    blank.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+  })
+  expect(mocked.patchMutate).not.toHaveBeenCalled()
+  expect(container.querySelector('input[aria-label="Title"]')).not.toBeNull()
+  expect(container.textContent).toContain('A title cannot be blank')
+
+  const same = typeTitle(container, epic.title)
+  act(() => {
+    same.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }))
+  })
+  expect(mocked.patchMutate).not.toHaveBeenCalled()
+  expect(container.querySelector('input[aria-label="Title"]')).toBeNull()
+})
+
+it('reopens the failed title draft with an error toast when the patch fails', () => {
+  const container = renderDetail(epic)
+  act(() => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Edit title"]')?.click()
+  })
+  typeTitle(container, 'unsaved title')
+  act(() => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Save title"]')?.click()
+  })
+  const callbacks = mocked.patchMutate.mock.calls[0]?.[1] as
+    | { onError?: (error: Error) => void }
+    | undefined
+  act(() => callbacks?.onError?.(new Error('write failed')))
+
+  expect(container.querySelector<HTMLInputElement>('input[aria-label="Title"]')?.value).toBe(
+    'unsaved title',
+  )
+  expect(document.body.textContent).toContain(`Could not update title of ${epic.id}`)
 })

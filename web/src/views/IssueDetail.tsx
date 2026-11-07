@@ -176,6 +176,25 @@ function SheetBody({
   const [draft, setDraft] = useState('')
   const [criteriaDraft, setCriteriaDraft] = useState<string[]>([''])
   const [confirmClear, setConfirmClear] = useState<ProseField | null>(null)
+  const [titleDraft, setTitleDraft] = useState<string | null>(null)
+
+  const saveTitle = () => {
+    if (titleDraft === null) return
+    const title = titleDraft.trim()
+    if (title === '') return
+    setTitleDraft(null)
+    if (title === issue.title) return
+    patchIssue.mutate(
+      { id: issue.id, patch: { title } },
+      {
+        onSuccess: () => toast.push({ tone: 'ok', title: `Updated title of ${issue.id}` }),
+        onError: (err) => {
+          toast.error(`Could not update title of ${issue.id}`, err)
+          setTitleDraft(titleDraft)
+        },
+      },
+    )
+  }
 
   const openEditor = (field: ProseField) => {
     setConfirmClear(null)
@@ -241,7 +260,7 @@ function SheetBody({
   }
 
   // Same guard as the list views: nothing refetches under an open popover.
-  useInteractionLock(Boolean(menu) || closing || editing !== null)
+  useInteractionLock(Boolean(menu) || closing || editing !== null || titleDraft !== null)
 
   /** Every metadata chip in this sheet is also a button; the popovers are the
    *  same ones the backlog rows and board cards open. */
@@ -254,7 +273,31 @@ function SheetBody({
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <div className="px-5 py-4">
-          <h2 className="text-[15px] leading-snug font-semibold text-ink">{issue.title}</h2>
+          {titleDraft === null ? (
+            <div className="flex items-start gap-3">
+              <h2 className="min-w-0 flex-1 text-[15px] leading-snug font-semibold break-words text-ink">
+                {issue.title}
+              </h2>
+              <button
+                type="button"
+                className="chip shrink-0"
+                data-tone="neutral"
+                data-outline="true"
+                aria-label="Edit title"
+                title="Edit title"
+                onClick={() => setTitleDraft(issue.title)}
+              >
+                edit
+              </button>
+            </div>
+          ) : (
+            <TitleEditor
+              value={titleDraft}
+              onChange={setTitleDraft}
+              onSave={saveTitle}
+              onCancel={() => setTitleDraft(null)}
+            />
+          )}
         </div>
 
         {/* — Metadata datasheet ——————————————————————————————————————— */}
@@ -732,6 +775,68 @@ function ClearConfirm({
       <button type="button" className="btn h-6 text-[11.5px]" onClick={onClear}>
         Clear
       </button>
+    </div>
+  )
+}
+
+function TitleEditor({
+  value,
+  onChange,
+  onSave,
+  onCancel,
+}: {
+  value: string
+  onChange: (value: string) => void
+  onSave: () => void
+  onCancel: () => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const blank = value.trim() === ''
+
+  useLayoutEffect(() => {
+    const input = inputRef.current
+    if (!input) return
+    input.focus()
+    input.setSelectionRange(input.value.length, input.value.length)
+  }, [])
+
+  return (
+    <div
+      onKeyDown={(event) => {
+        if (event.key === 'Escape') {
+          event.preventDefault()
+          event.stopPropagation()
+          onCancel()
+        } else if (event.key === 'Enter') {
+          event.preventDefault()
+          onSave()
+        }
+      }}
+    >
+      <input
+        ref={inputRef}
+        type="text"
+        aria-label="Title"
+        aria-invalid={blank || undefined}
+        className="field w-full text-[15px] font-semibold"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      <div className="mt-2 flex items-center justify-end gap-1.5">
+        {blank && <span className="mr-auto text-[11.5px] text-danger">A title cannot be blank</span>}
+        <button type="button" className="btn btn-quiet h-6 text-[11.5px]" onClick={onCancel}>
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="btn h-6 text-[11.5px]"
+          aria-label="Save title"
+          disabled={blank}
+          onClick={onSave}
+        >
+          Save
+        </button>
+      </div>
     </div>
   )
 }
