@@ -73,13 +73,20 @@ or an undo, you do and report in one `say` line.
    only the operator can decide, `--a` and `--b` the two answers, `--recommend`
    which of them you recommend (`a` or `b`) and `--because` its one-line why in
    everyday words, which the ops room shows above the answers and the digest
-   prints. One command writes them all and refuses without any of them; it is
+   prints. `--a-does` and `--b-does` say what recording each answer does on its
+   own, with no turn of yours: `requeue` (reopen it for the next drain),
+   `close-landed`, `close-wontdo`, `approve` or `decline` (a proposed plan), or
+   `rewrite` (the default: nothing runs and the answer comes back to you to
+   rewrite the bead from). Give an answer its plain action whenever its words
+   are one; keep `rewrite` only for an answer you must act on with judgment.
+   One command writes them all and refuses without any of the others; it is
    the only way anything is deferred to the operator:
 
 ```bash
 djinn needs-you defer <bead-id> --recommend <a|b> --because "<why you recommend that answer, in one line of everyday words>" --what "<2-4 sentences in everyday words: what is wrong or proposed today, what would change, what the operator would notice; no file paths, bead ids or code names>" \
   --why "<why only the operator can decide>" \
-  --question "<one question>" --a "<first answer>" --b "<second answer>"
+  --question "<one question>" --a "<first answer>" --b "<second answer>" \
+  --a-does <requeue|close-landed|close-wontdo|approve|decline|rewrite> --b-does <…>
 ```
 
 ```say
@@ -163,7 +170,7 @@ bd update <bead-id> --acceptance="$(cat /tmp/ac.md)"
    in the same update:
 
 ```bash
-bd update <bead-id> --status open --remove-label=needs-operator
+bd update <bead-id> --status open --remove-label=needs-operator --remove-label=answered
 ```
 
 "Queued" means exactly one thing: `bd ready --json` lists that id. Check it,
@@ -231,24 +238,46 @@ rewrite-and-requeue or a hand `bd update --remove-label=proposed`. A
 `bd close <message-id> --reason "<what the operator decided>"`. The hook is the
 only way new items reach you; nothing else checks for them.
 
-An `answer: <id> → <answer text> — bd show <id>` line is the operator's ruling,
-recorded on the item with `djinn needs-you answer <id> <a|b|own words>`: `a`
-or `b` picks that answer from the item's deferral notes, any other words are
-their own answer. Ask the operator nothing back: handle it from **Already
-landed?** in the conversation above exactly like `rule on <id>: <answer>` — a
-landed bead closed, any other bead rewritten from the answer and requeued, a `mail:` item closed with it, an `idea:` item
-planned or declined. Then add one comment on the item whose first line opens
-`<your seat's display name>:` and says what you did with the answer
-(`bd comments add <id> -f <file>`): from then on the answer reads as ruled and
-the operator can no longer withdraw it. A newer `answer:` line for the same
-item replaces the one before it.
+An answer carries itself out. `djinn needs-you answer <id> <a|b|own words>`
+— from the CLI or the ops room desk alike — runs the action the deferral
+recorded for that answer (`--a-does`/`--b-does`: requeue, close as landed,
+close as won't do, approve or decline a proposed plan) the moment it is
+recorded, then adds one comment whose first line opens `djinn needs-you:` and
+says what was done and names the answer it carried out. That answer is
+ruled: it never reaches you as an `answer:` line, and you never carry it out
+again — never requeue, close, approve or decline an item whose newest
+`djinn needs-you:` comment names its newest `answer:` or follows it. Only an
+answer that needs judgment reaches you: the operator's own words, an answer
+whose deferral recorded `rewrite`, or one whose action failed before it took
+effect. For that last kind — an `a` or `b` answer whose recorded action is not
+`rewrite` — run `djinn needs-you answer <id> --carry` once: it runs the
+action only if the bead does not show it done and writes the missing comment.
+If it fails again, handle the answer as one that needs judgment.
 
-An `answer:` on a bead labelled `triage:operator`, whether triage put the label
-there or a seat's deferral of a proposed plan did, is ruled with
-`djinn triage approve <id>` or `djinn triage decline <id> --reason "<words>"`
-as `### A triage:operator bead` below says, never through step 4's
-rewrite-and-requeue or a hand `bd update --remove-label=proposed`; then add the
-signed comment as above.
+An `answer: <id> → <answer text> — next: the lead, rewrite and requeue —
+bd show <id>` line is that answer: the operator's ruling, waiting on you. Ask the operator
+nothing back: handle it from **Already landed?** in the conversation above
+exactly like `rule on <id>: <answer>` — a landed bead closed, any other bead
+rewritten from the answer and requeued, a `mail:` item closed with it, an
+`idea:` item planned or declined. Then add one comment on the item whose first
+line opens `<your seat's display name>:` and says what you did with the answer
+(`bd comments add <id> -f <file>`): from then on the answer reads as ruled,
+leaves every needs-you surface, and the operator can no longer withdraw it. A
+newer `answer:` line for the same item replaces the one before it.
+
+A `waiting:` line is not yours: it names who moves next — an approved
+proposal whose beads are ready waits on the workshop's next tick, an epic
+whose children are all closed on the gardener's epic check at its next run.
+Report it only when the operator asks who holds something.
+
+A plain approve or decline of a bead labelled `triage:operator` has already
+run when it was recorded (triage's own hand-over records `approve` on `a` and
+`decline` on `b`), so it never reaches you. An `answer:` that does reach you on
+such a bead — the operator's own words, or a design question's answer — is
+ruled with `djinn triage approve <id>` or
+`djinn triage decline <id> --reason "<words>"` as `### A triage:operator bead`
+below says, never through step 4's rewrite-and-requeue or a hand
+`bd update --remove-label=proposed`; then add the signed comment as above.
 
 An answer on a bead labelled `review-follow-up` is never requeued: that label
 keeps it out of every drain, so reopened it waits forever. Take the answer as
@@ -324,9 +353,10 @@ label keeps every seat from proposing it again:
 djinn triage decline <id> --reason "<the operator's words>"
 ```
 
-When the answer is a plain approve or decline, run the command directly. When a
-plan the planner deferred with a design question comes back with an answer
-that settles it, first fold the operator's answer into the plan: rewrite the
+When the answer was a plain `a` or `b` whose deferral recorded approve or
+decline, it already ran: do nothing. When a `rule on` brings a plain approve
+or decline by conversation, run the command directly. When a plan the planner
+deferred with a design question comes back with an answer that settles it, first fold the operator's answer into the plan: rewrite the
 epic and each affected child's description, acceptance or design from the
 answer through `/create-bead`'s rules, or decline the parts the answer drops
 with `djinn triage decline <child-id> --reason "<the operator's words>"`; only
