@@ -480,6 +480,52 @@ func TestStopTerminatesRun(t *testing.T) {
 	}
 }
 
+// TestStopIsIdempotentAfterTheRunExits: a repeat Stop that arrives after the
+// child has already exited on the first SIGTERM is still a successful no-op.
+// A slow second click, or a test goroutine descheduled under load, lands there.
+func TestStopIsIdempotentAfterTheRunExits(t *testing.T) {
+	p := djinnProject(t, "djinn")
+	hub := &recordingHub{}
+	m := newTestManager(t, hub)
+	t.Setenv("FAKE_SUMMONER_MODE", "long")
+
+	run, err := m.Summon(context.Background(), p.Name, p.Workdir, SummonRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	waitForConsole(t, m, p.Name, run.ID, "trap installed", 5*time.Second)
+	if err := m.Stop(p.Name, run.ID); err != nil {
+		t.Fatalf("Stop: %v", err)
+	}
+	hub.waitFor(t, EventRunFinished, 10*time.Second)
+
+	if err := m.Stop(p.Name, run.ID); err != nil {
+		t.Errorf("Stop after the run exited = %v, want nil", err)
+	}
+	if err := m.Stop(p.Name, "run-other"); !errors.Is(err, ErrRunNotFound) {
+		t.Errorf("Stop of an unknown id = %v, want ErrRunNotFound", err)
+	}
+}
+
+// TestStopOfAFinishedRunIsNotFound: only a run Loom stopped is a no-op to stop
+// again. A run that ended on its own was never stopped, so it is not found.
+func TestStopOfAFinishedRunIsNotFound(t *testing.T) {
+	p := djinnProject(t, "djinn")
+	hub := &recordingHub{}
+	m := newTestManager(t, hub)
+	t.Setenv("FAKE_SUMMONER_MODE", "default")
+
+	run, err := m.Summon(context.Background(), p.Name, p.Workdir, SummonRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	hub.waitFor(t, EventRunFinished, 5*time.Second)
+
+	if err := m.Stop(p.Name, run.ID); !errors.Is(err, ErrRunNotFound) {
+		t.Errorf("Stop of a run that finished by itself = %v, want ErrRunNotFound", err)
+	}
+}
+
 // TestStopKillsAfterGrace: a child that ignores SIGTERM must still die.
 func TestStopKillsAfterGrace(t *testing.T) {
 	p := djinnProject(t, "djinn")

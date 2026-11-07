@@ -419,15 +419,21 @@ func (m *Manager) parseConsole(path string) *ConsoleParse {
 
 // Stop terminates a managed run: SIGTERM to the process group, SIGKILL after
 // the grace period.
+//
+// Stop is idempotent: stopping a run that Loom already stopped succeeds,
+// including after the child has exited and left the active set.
 func (m *Manager) Stop(project, runID string) error {
 	m.mu.Lock()
 	mr, ok := m.active[project]
-	if !ok || mr.cmd == nil {
+	if !ok || mr.cmd == nil || mr.run.ID != runID {
+		exiting, stopped := m.reapingRun(project, runID)
 		m.mu.Unlock()
-		return ErrRunNotFound
-	}
-	if mr.run.ID != runID {
-		m.mu.Unlock()
+		if stopped || (!exiting && m.savedAsStopped(project, runID)) {
+			return nil
+		}
+		if !ok || mr.cmd == nil {
+			return ErrRunNotFound
+		}
 		return fmt.Errorf("%w: %s is not the active run", ErrRunNotFound, runID)
 	}
 	if mr.stopping {
@@ -451,6 +457,24 @@ func (m *Manager) Stop(project, runID string) error {
 		}
 	}()
 	return nil
+}
+
+// reapingRun reports whether runID has left the active set but has not yet
+// saved its final record, and if so whether Loom stopped it. A run is in
+// m.reaping until after that save, so a run absent here has its final state in
+// the store. The caller holds m.mu.
+func (m *Manager) reapingRun(project, runID string) (exiting, stopped bool) {
+	for mr := range m.reaping {
+		if mr.run.Project == project && mr.run.ID == runID {
+			return true, mr.stopping
+		}
+	}
+	return false, false
+}
+
+func (m *Manager) savedAsStopped(project, runID string) bool {
+	saved, err := m.store.Load(project, runID)
+	return err == nil && saved != nil && saved.State == StateStopped
 }
 
 // Active returns the running managed run for a project, if any.
