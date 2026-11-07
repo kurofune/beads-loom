@@ -382,7 +382,9 @@ If the user passes `--execute` or asks you to create the beads directly, gate ev
 
 **2. Gate every bead — collect nodes, not ids.** For each bead:
 
-1. Assemble the args-mode payload (see the `/create-bead` skill for the schema): `key`, `title`, `type`, `priority`, `description`, `acceptance`, plus optional `design`, `notes`, `labels`, `touches`. Leave out `parent` and `blocked_by`: the planner wires every relationship in step 3.
+1. Assemble the args-mode payload (see the `/create-bead` skill for the schema): `key`, `title`, `type`, `priority`, `description`, `acceptance`, plus `design`, `notes`, `labels`, `touches`, `short_name` — `touches` and `short_name` on every payload (below), the other three when present. Leave out `parent` and `blocked_by`: the planner wires every relationship in step 3.
+
+   **`short_name` rides every payload.** It is the bead's name in the ops room's narrow columns: at most 28 cells of whole words, no `…`, no trailing punctuation — the rules are `/create-bead`'s `short_name` section. Write it from the bead's title and pass it; `/create-bead` checks it and the returned node carries it as `metadata.short_name`. A node without `metadata.short_name` never goes into the plan. A name `/create-bead` refuses comes back as a structured error: write a valid one and re-invoke.
 
    **`touches` is optional to `/create-bead` but mandatory here — fill it for every bead this skill emits.** Derive it from the bead's own Design Notes (Step 6): the file paths and directories already named there are the list, minus anything the bead only reads. Directories keep their trailing slash; paths stay repo-relative. The summoner refuses to dispatch two ready beads whose lists overlap, so a bead filed without `touches` is treated as colliding with nothing and can be worked in parallel with a bead editing the same file. A planner that omits it is the only reason that happens — nothing downstream can recover the judgment, because nothing downstream has the plan.
 2. Invoke `/create-bead` in args mode WITHOUT `--execute`. It runs the AC gate and returns its gate-approved node — `acceptance_criteria` as the gate approved it — and files nothing.
@@ -450,6 +452,7 @@ Every subagent is the djinn-planner agent `djinn init` writes: it drafts and gat
 1. For every id in the returned `ids` map, run `bd show <id> --json` and confirm on `.[0]`:
    - `acceptance_criteria` is non-empty and matches the gate-approved node — not the original draft; a gate rewrite is correct, never revert it.
    - `metadata.touches` matches the drafted Touches.
+   - `metadata.short_name` is present and equals the gate-approved node's name (`bd show <id> --json | jq '.[0].metadata.short_name'`).
    - `parent` equals the drafted parent (the id its `parent_key` resolved to, or its `parent_id`); top-level epics have none.
    - `dependencies` holds a `dependency_type: "blocks"` entry for every drafted blocker.
 
@@ -467,6 +470,7 @@ Every subagent is the djinn-planner agent `djinn init` writes: it drafts and gat
 | Design Notes | `design` | File paths, existing patterns, data sources, API endpoints to call, architectural context. The HOW. |
 | Source & Context | `notes` | Plan traceability (`Source: {plan-file-path} §{Section}` — file path is mandatory so agents can navigate to the source plan), relationship to sibling beads, constraints, what this enables downstream. |
 | Touches | `touches` | The subset of the Design Notes paths this bead will CHANGE (not merely read), as a list of repo-relative strings. Directories carry a trailing slash. `/create-bead` renders it as `"metadata": {"touches": [...]}`; the summoner reads it at dispatch to serialize overlapping beads. |
+| Short name (from the title) | `short_name` | The bead's name in the room's narrow columns: at most 28 cells of whole words, no `…`, no trailing punctuation. `/create-bead` checks it and renders it as `"metadata": {"short_name": "..."}`. |
 | Parent | — | Not a `/create-bead` arg here: the planner adds `parent_key` / `parent_id` in step 3. |
 | Blocks / blocked by | — | Not a `/create-bead` arg here: the planner adds every edge (`from_key` / `to_key` / `to_id`) in step 3. |
 

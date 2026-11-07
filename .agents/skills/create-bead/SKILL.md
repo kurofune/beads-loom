@@ -33,12 +33,13 @@ A bead that answers only "what" produces a skeleton that compiles. A bead that a
 
 ### Args mode (programmatic — for /plan-to-beads composition)
 
-The invoker passes a structured bead spec. Required keys: `title`, `type`, `priority`, `description`, `acceptance`. Optional: `key`, `parent`, `design`, `notes`, `labels`, `blocked_by`, `touches`, `ac_labels`, `agent`, `crucible`.
+The invoker passes a structured bead spec. Required keys: `title`, `type`, `priority`, `description`, `acceptance`. Optional: `key`, `parent`, `design`, `notes`, `labels`, `blocked_by`, `touches`, `ac_labels`, `short_name`, `agent`, `crucible`.
 
 - `key` — the node's plan-local key (default `bead`). `/plan-to-beads` passes a unique key per bead so it can wire `parent_key` and edges between nodes.
 - `parent` — an EXISTING bead id; becomes the node's `parent_id`.
 - `blocked_by` — EXISTING bead ids this bead waits on; each becomes an edge `{"from_key": <key>, "to_id": <id>, "type": "blocks"}`.
 - `ac_labels` — one short label per non-blank `acceptance` line, in order. Absent, the skill authors them; see `ac_labels` below.
+- `short_name` — the bead's name in narrow columns, at most 28 cells of whole words. Absent, the skill authors it from the title; see `short_name` below.
 
 ```yaml
 title: "Add JWT validation middleware"
@@ -58,6 +59,7 @@ notes: "Source: docs/auth-design.md §Authentication"
 labels: "auth,middleware"
 touches: ["internal/middleware/", "internal/auth/token.go"]
 ac_labels: ["401 on expired tokens", "401 on malformed tokens", "Valid tokens passed on", "Coverage of all three cases"]   # optional; authored when absent
+short_name: "JWT validation middleware"   # optional; authored from the title when absent
 agent: "codex gpt-6-astra high"   # optional; see `agent` below
 # crucible: {...}                 # only on a formula:crucible bead; see `crucible` below
 ```
@@ -68,7 +70,7 @@ The skill validates the input, runs the AC-quality gate, iterates if needed, and
 
 When invoked without args, the skill asks clarifying questions in this order:
 
-1. **Title** — short summary, a plain descriptive phrase (no bracket prefix).
+1. **Title** — short summary, a plain descriptive phrase (no bracket prefix). Beside it the skill shows the `short_name` it authored (`short_name` below), for the operator to correct.
 2. **Type** — `epic` / `feature` / `task` / `chore` / `bug`.
 3. **Priority** — P0-P4 (0=critical, 4=backlog).
 4. **Parent** — bead id, or `none`.
@@ -100,6 +102,7 @@ Every plan node MUST carry each field under its own key. Never concatenate field
 | Source & context | `notes` | Plan traceability, background constraints, sibling-bead relationships |
 | Files it will change | `metadata` | The `touches` path list, as JSON. Read at dispatch, not by the executing agent — see below |
 | A name per criterion | `metadata` | The `ac_labels` list, as JSON. Read by the ops room's bead detail, not by the executing agent — see below |
+| The bead's name in narrow columns | `metadata` | The `short_name` string. Read by the ops room, not by the executing agent — see below |
 | Who does the agent work | `metadata` | The `agent` override, as JSON. Read by the harness, not by the executing agent — see below |
 | The number a crucible bead moves | `metadata` | The `crucible` spec, as JSON. Read by the harness's judge — see below |
 
@@ -119,6 +122,7 @@ A plan is `{"commit_message": ..., "nodes": [...], "edges": [...]}`. bd drops an
 | labels | `labels` | array of strings |
 | touches | `metadata.touches` | `"metadata": {"touches": [...]}`; omit the `touches` key when absent |
 | ac_labels | `metadata.ac_labels` | `"metadata": {"ac_labels": [...]}` beside `touches`; always present, one string per non-blank `acceptance_criteria` line |
+| short_name | `metadata.short_name` | `"metadata": {"short_name": "..."}` beside `touches` and `ac_labels`; always present, a string of at most 28 cells of whole words |
 | agent | `metadata.agent` | `"metadata": {"agent": {...}}` beside `touches`; omit when absent |
 | crucible | `metadata.crucible` | `"metadata": {"crucible": {...}}` beside `touches`; only with the `formula:crucible` label |
 | key | `key` | plan-local node key, unique in the plan |
@@ -144,7 +148,8 @@ A lone bead is a one-node plan:
       "notes": "Source: docs/auth-design.md §Authentication",
       "labels": ["auth", "middleware"],
       "metadata": {"touches": ["internal/middleware/", "internal/auth/token.go"],
-                   "ac_labels": ["401 on expired tokens", "401 on malformed tokens", "Valid tokens passed on", "Coverage of all three cases"]},
+                   "ac_labels": ["401 on expired tokens", "401 on malformed tokens", "Valid tokens passed on", "Coverage of all three cases"],
+                   "short_name": "JWT validation middleware"},
       "parent_id": "djinn-auth1"
     }
   ],
@@ -175,7 +180,7 @@ Strongly recommended:
 
 **Shape.** A JSON array of strings under the `touches` key. Paths are **repo-relative** — no leading `./`, no absolute paths, no globs. A **directory ends in a trailing slash** (`internal/djinn/drainstate/`) and covers everything beneath it; anything without a trailing slash is one file (`cmd/summoner/spawner.go`).
 
-**Emission.** When `touches` is present, the node's `metadata` carries a `touches` key, with `ac_labels` (below) beside it in the same object:
+**Emission.** When `touches` is present, the node's `metadata` carries a `touches` key, with `ac_labels` and `short_name` (below) beside it in the same object:
 
 ```json
 "metadata": {"touches": ["cmd/summoner/", "internal/djinn/drainstate/"]}
@@ -204,6 +209,20 @@ Round-trip check after filing: `bd show <id> --json | jq '.[0].metadata.touches'
 **Wrong length.** In args mode, an `ac_labels` list whose length differs from the non-blank acceptance line count returns a structured error naming both counts (`ac_labels has 3 labels; acceptance has 4 non-blank lines`) and builds no node: the invoker misaligned them, and guessing which label belongs to which line would put a wrong name on a criterion. The error proposes no label and no corrected list, not even as a hint: the invoker re-sends a list of the right length, or omits `ac_labels` so the skill authors them. In interactive mode, say both counts and author the list again.
 
 Round-trip check after filing: `bd show <id> --json | jq '.[0].metadata.ac_labels'`.
+
+## `short_name` — the bead's name in narrow columns
+
+`short_name` is the bead's name wherever a whole title does not fit: the ops room lists beads in narrow columns, and a title cut mid-word or at its first clause reads as noise. The room does not make names up — it shows the one this skill wrote. The title itself is untouched; `short_name` only stands in for it where space is short.
+
+**Shape.** A JSON string under the `short_name` key in `metadata`, beside `touches` and `ac_labels`: at most 28 cells, made of whole words of plain prose, with no `…`, no trailing punctuation (no `.`, `,`, `:`, `;`, `-` or `—` at the end), no line break and no leading or trailing space. A cell is one column of a terminal: each ASCII character is one cell, a wide character (CJK, emoji) two. Every node carries the key.
+
+**Who writes it.** Args mode takes an optional `short_name` string. A passed value is checked against the rules here and, when it holds, carried unchanged — never shortened, reworded or "improved". Absent, the skill authors one from the title, in args and interactive mode alike.
+
+**The authoring rule.** When the whole title fits in 28 cells, the title is the name (minus any trailing punctuation). Otherwise name what the bead is about in a noun phrase of whole words that fits: the title's leading words, cut only at a space, when they read as a phrase on their own; a fresh phrase from the title's own words when they do not. Never end on a dangling article, preposition or conjunction (`a`, `the`, `with`, `and`), never cut inside a word, never mark the cut with `…`. Good: `JWT validation middleware` for "Add JWT validation middleware" (29 cells); `Short names at filing` for "Every bead files with a short name the skill writes". Not `Every bead files with a` (dangling article), not `Every bead files with a sho` (cut inside a word), not `Every bead files with a…` (an ellipsis).
+
+**A bad passed value.** In args mode, refuse a passed `short_name` that is empty, is over 28 cells, carries `…` or trailing punctuation, or is a prefix of the title that ends inside one of the title's words (the title's next character after the prefix is a letter or digit, not a space). Return a structured error naming the value and its fault — its cell count and the 28-cell limit, or the word it cuts (`"Every bead files with a short na" cuts the title's word "name"`) — and build no node. Name every fault the value has. The error proposes no replacement name, not even as a hint: the invoker re-sends a valid name, or omits `short_name` so the skill authors one. A value of at most 28 cells that ends at a word boundary of the title is valid even when the title's next word would not fit: carry it unchanged. In interactive mode, say what is wrong and author the name again.
+
+Round-trip check after filing: `bd show <id> --json | jq '.[0].metadata.short_name'`.
 
 ## `agent` — who does the agent work
 
@@ -524,7 +543,8 @@ jq -n \
              description: ($description|t), acceptance_criteria: ($acceptance|t),
              design: ($design|t), notes: ($notes|t),
              labels: ["support", "web"],
-             metadata: {touches: ["web/src/lib/customer/"], ac_labels: $ac_labels[0]},
+             metadata: {touches: ["web/src/lib/customer/"], ac_labels: $ac_labels[0],
+                        short_name: "Customer detail dossier"},
              parent_id: "djinn-supp1"}],
     edges: [{from_key: "bead", to_id: "djinn-store2", type: "blocks"}]}' \
   > "$d/plan.json"
@@ -579,8 +599,8 @@ Before filing, this skill invokes `/ac-quality-review` on the drafted `acceptanc
 
 ### Args mode
 
-- **Without `--execute`** (the `/plan-to-beads` path): file nothing. Return the gate-approved node as a fenced ```json``` block — the node object exactly as the Field mapping builds it (`key`, every present field, `acceptance_criteria` as the gate approved it), plus `blocked_by` ids as a sibling list. The planner merges it into its one plan.
-- **With `--execute`**: file the one-node plan (Filing), run the post-filing verification, and return `{bead_id, acceptance}`.
+- **Without `--execute`** (the `/plan-to-beads` path): file nothing. Return the gate-approved node as a fenced ```json``` block — the node object exactly as the Field mapping builds it (`key`, every present field, `acceptance_criteria` as the gate approved it, `metadata.ac_labels` and `metadata.short_name` always), plus `blocked_by` ids as a sibling list. The planner merges it into its one plan.
+- **With `--execute`**: file the one-node plan (Filing), run the post-filing verification, and return `{bead_id, acceptance, short_name}`.
 - **On HALT**: emit a fenced ```json``` block with the third-review `findings[]` and a one-line summary; build no node and file nothing.
 
 ### Interactive mode
@@ -594,6 +614,7 @@ For each id in the returned `ids` map, run `bd show <id> --json` and confirm on 
 - `acceptance_criteria` is non-empty and equals the gate-approved text.
 - `metadata.touches` equals the drafted list, or is absent when none was drafted.
 - `metadata.ac_labels` equals the drafted labels, as many as the non-blank `acceptance_criteria` lines.
+- `metadata.short_name` equals the drafted name: present, at most 28 cells, whole words — `bd show <id> --json | jq '.[0].metadata.short_name'`.
 - `metadata.agent` equals the drafted override, or is absent when none was drafted.
 - `metadata.crucible` equals the drafted spec with `stop.usd` set, or is absent when none was drafted.
 - `parent` equals the drafted parent (`parent_id`, or the id the plan's `parent_key` resolved to).
@@ -605,6 +626,7 @@ Fix a wrong field with `bd update <id>`; an `acceptance_criteria` repair must pa
 
 - **bd below 1.3.0.** Stop before any filing, naming the installed version and the 1.3.0 floor (Preflight).
 - **`ac_labels` of the wrong length.** In args mode, return a structured error naming the label count and the non-blank acceptance line count; build no node (`ac_labels` above).
+- **A bad `short_name`.** In args mode, a passed `short_name` that is empty, over 28 cells, carries `…` or trailing punctuation, or cuts a title word returns a structured error naming the value and its fault (the 28-cell limit or the word it cuts); build no node (`short_name` above).
 - **Missing required field.** In interactive mode, stop and ask. In args mode (programmatic, no human in the loop), return a structured error naming the missing keys; do NOT proceed and do NOT invent titles, priorities, or types. The caller (typically `/plan-to-beads`) decides whether to retry with the missing fields or to escalate.
 - **Parent epic unclear.** Run `bd list --type=epic --status=open --no-parent` to enumerate top-level epics. Ask the user which one — or whether to file a new top-level epic in the SAME plan: a second node, gated like any other, with the bead's `parent_key` pointing at it.
 - **Existing id not found.** A `parent` or `blocked_by` id that `bd show` cannot find stops filing; ask (interactive) or return the error (args mode).
