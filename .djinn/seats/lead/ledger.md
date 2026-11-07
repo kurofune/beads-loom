@@ -11,3 +11,4 @@
 - loom-uij: operator (3-0-0). Lead flagged changes-how-the-workshop-decides (planner's operator-approved label is an approval signal triage reads).
 - loom-3fv: go (2-1-0).
 - loom-iyh: operator (0-3-0). Lead flagged deleting-behaviour (docs/adr/ trigger is dead only by today's data); lead voted no-go, prefers the charter naming ADRs.
+- 2026-11-07: triaged loom-gkp (go) and the 6 follow-ups (3 closed done/obsolete; 3 re-authored as loom-h4e, loom-964, loom-a7s); drain of those 4 landed (~$21). Operator approved loom-0uo: lead charter epic-closing rule edited (9bd61ab); djinn template half filed as djinn-9b9ww (operator go).
