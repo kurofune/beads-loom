@@ -795,3 +795,44 @@ it('reopens the failed title draft with an error toast when the patch fails', ()
   )
   expect(document.body.textContent).toContain(`Could not update title of ${epic.id}`)
 })
+
+// jsdom never turns Enter on a focused button into a click; a browser does
+// unless a keydown handler prevents the default.
+function pressEnterOn(button: HTMLButtonElement) {
+  act(() => {
+    button.focus()
+    const event = new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })
+    if (button.dispatchEvent(event)) button.click()
+  })
+}
+
+it('discards the title draft on Enter at a focused Cancel and saves once on Enter at Save', () => {
+  const container = renderDetail(epic)
+  act(() => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Edit title"]')?.click()
+  })
+  typeTitle(container, 'draft to discard')
+  const cancel = Array.from(container.querySelectorAll('button')).find(
+    (button) => button.textContent === 'Cancel',
+  )
+  if (!cancel) throw new Error('Cancel button not found')
+  pressEnterOn(cancel)
+
+  expect(mocked.patchMutate).not.toHaveBeenCalled()
+  expect(container.querySelector('input[aria-label="Title"]')).toBeNull()
+  expect(container.querySelector('h2')?.textContent).toBe(epic.title)
+
+  act(() => {
+    container.querySelector<HTMLButtonElement>('button[aria-label="Edit title"]')?.click()
+  })
+  typeTitle(container, 'Saved by Enter on Save')
+  const save = container.querySelector<HTMLButtonElement>('button[aria-label="Save title"]')
+  if (!save) throw new Error('Save button not found')
+  pressEnterOn(save)
+
+  expect(mocked.patchMutate).toHaveBeenCalledTimes(1)
+  expect(mocked.patchMutate).toHaveBeenCalledWith(
+    { id: epic.id, patch: { title: 'Saved by Enter on Save' } },
+    expect.anything(),
+  )
+})

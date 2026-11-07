@@ -807,9 +807,6 @@ function TitleEditor({
           event.preventDefault()
           event.stopPropagation()
           onCancel()
-        } else if (event.key === 'Enter') {
-          event.preventDefault()
-          onSave()
         }
       }}
     >
@@ -821,6 +818,12 @@ function TitleEditor({
         className="field w-full text-[15px] font-semibold"
         value={value}
         onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            onSave()
+          }
+        }}
       />
       <div className="mt-2 flex items-center justify-end gap-1.5">
         {blank && <span className="mr-auto text-[11.5px] text-danger">A title cannot be blank</span>}
