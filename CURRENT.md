@@ -2,7 +2,7 @@
 
 **Mode:** post-launch.
 **Goal:** keep Loom working for any beads user: public CI green, review follow-ups worked down.
-**Last change:** readiness epic loom-iqo closed; the stranger walk (loom-z7d) added title editing to the issue sheet (a5d0c16).
+**Last change:** closed the 33 P3/P4 `review-follow-up` beads filed before djinn's P2 follow-up floor (D1).
 
 ## State
 
@@ -13,7 +13,7 @@
 - Epic deferred: Runs (loom-0zj). Its external gate is gone; its work goes
   inside the djinn integration, whose backend seam now exists. loom-0zj.3 is live again.
 - Graph: closed. Open spin-off: loom-pks (Initiatives chained count, P4).
-- 33 ready beads carry `review-follow-up`, all P3.
+- 6 `review-follow-up` beads open, all `proposed` (triage decides): loom-suh, loom-dxf (P2); loom-l3f, loom-k8j, loom-jy7, loom-ucz (P3, IMPORTANT findings left when a review ran out of attempts).
 - loom-gkp (P2, `proposed`, in triage): an Enter that confirms an IME composition submits fields app-wide; only the title editor guards it.
 - Settled surfaces, each ruled in DECISIONS.md — do not relitigate without new
   evidence: the 200-row ceiling (loom-jhd/7qh/nlm), Backlog paging by reachable
@@ -34,7 +34,7 @@
 
 ## Next checkpoint
 
-Next: loom-gkp once triage approves it, then the 33 P3 `review-follow-up` beads.
+Next: loom-gkp and the 6 follow-ups, each once triage approves it.
 
 ## Stop conditions
 
