@@ -3,7 +3,7 @@
 # djinn-compat: 4
 name: verify-acceptance
 description: >-
-  Review a completed bead's implementation against its acceptance_criteria, criterion-by-criterion, and emit a strict-mode `report.json` (schema in `djinn/internal/djinn/report/`). Use after /review but before declaring STATUS COMPLETE. The bead-axis counterpart to code-axis review — answers "did we build what was asked for?" not "is the code well-structured?" Triggers on: verify acceptance, bead coverage check, check acceptance criteria, did the implementation match the bead.
+  Review a completed bead's implementation against its acceptance_criteria, criterion-by-criterion, and emit a strict-mode `report.json`. Use after /review but before declaring STATUS COMPLETE. The bead-axis counterpart to code-axis review — answers "did we build what was asked for?" not "is the code well-structured?" Triggers on: verify acceptance, bead coverage check, check acceptance criteria, did the implementation match the bead.
 ---
 
 <!-- djinn-compat-check: begin -->
@@ -18,7 +18,7 @@ Bead-axis review: judge every acceptance criterion against the diff plus the evi
 
 **Scope boundary — read this before anything else.** Findings MUST be grounded in the literal text of `bead.acceptance_criteria`. Do NOT expand scope. If the implementation is missing a capability that seems useful but is not named in the criteria, that is a bead-authoring concern, not a `/verify-acceptance` finding. This skill answers exactly one question: *does the diff implement every criterion the bead names?*
 
-**Strict mode — read this twice.** A `report.json` accepts an iteration only when `complete: true` AND every criterion has `status: "pass"`. Acceptance has exactly two branches: all-pass → `complete: true`, or anything else → `complete: false` with a non-empty `reason`. The harness rolls the iteration back on `complete: false`; the Author then fixes the gap (or files a separate bead for genuinely-out-of-scope work and reduces the parent's criteria) and re-runs. The strict-mode rule is enforced by `report.IsAccept` (`djinn/internal/djinn/report/accept.go`) — emitting `complete: true` with a partial or fail criterion will be rejected by the gate regardless of how persuasive the note reads.
+**Strict mode — read this twice.** Mark `complete: true` only when every criterion has `status: "pass"`. Acceptance has exactly two branches: all-pass → `complete: true`, or anything else → `complete: false` with a non-empty `reason`. On `complete: false` the Author fixes the gap (or files a separate bead for genuinely-out-of-scope work and reduces the parent's criteria) and re-runs. No code checks this rule for you: a partial or fail criterion means `complete: false`, however persuasive its note reads.
 
 ## Inputs
 
@@ -28,7 +28,7 @@ The invoker must provide:
 2. **Diff base ref** — the commit before this bead's work started. Under DJINN, use the harness `pre_sha` (the fallback below names where to read it). Otherwise `HEAD~N` where N is this iteration's commit count.
 3. **Evidence** — the bead's latest evidence comment, read with `bd comments <bead_id> --json` (djinn-mr56i; there is no evidence file)
 
-Only input 1 is guaranteed: in formula mode the harness's verify step passes the bead id and nothing else, and there is no operator in the loop to supply the rest. If an input is missing, derive it from convention and continue — never stop, ask, or wait for a human: the diff base ref is the pre-implement SHA the harness records (`pre_sha`) — read it from the iteration's `[run.N] <bead_id>` child bead with `bd show <run_bead_id> --json | jq -r '.[0].metadata.pre_sha'` (written at run-open time by `internal/djinn/session/iter_beads.go`); when that bead or field is unreadable, fall back to `git merge-base <default-branch> HEAD`, and outside a harness run to `HEAD~N` for this iteration's commit count. The evidence is always the bead's own comment thread — no path to pass. In formula mode the harness records that comment in its `commit-push` step, which runs AFTER verification, so inside a harness run (`DJINN_SESSION=1`) the bead usually carries no evidence comment for this iteration yet: when none is present there, skip the row-count check in Step 4 and judge every criterion from the bead text and the diff alone; in that mode its absence is never a `fail`. Outside a harness run the evidence comment is the author's §6 obligation and is expected to exist: a missing one is a `fail`.
+Only input 1 is guaranteed: a harness caller passes the bead id and nothing else, and there is no operator in the loop to supply the rest. If an input is missing, derive it from convention and continue — never stop, ask, or wait for a human: the diff base ref is the pre-implement SHA the harness records (`pre_sha`) — read it from the iteration's `[run.N] <bead_id>` child bead with `bd show <run_bead_id> --json | jq -r '.[0].metadata.pre_sha'` (written at run-open time by `internal/djinn/session/iter_beads.go`); when that bead or field is unreadable, fall back to `git merge-base <default-branch> HEAD`, and outside a harness run to `HEAD~N` for this iteration's commit count. The evidence is always the bead's own comment thread — no path to pass. In formula mode the harness records that comment in its `commit-push` step, which runs AFTER verification, so inside a harness run (`DJINN_SESSION=1`) the bead usually carries no evidence comment for this iteration yet: when none is present there, skip the row-count check in Step 4 and judge every criterion from the bead text and the diff alone; in that mode its absence is never a `fail`. Outside a harness run the evidence comment is the author's §6 obligation and is expected to exist: a missing one is a `fail`.
 
 ## Process
 
@@ -73,7 +73,7 @@ If no comment matches the current run and iteration:
 - **Inside a harness run** (formula mode, `DJINN_SESSION=1`): the harness has not recorded it yet. Skip this step entirely and judge from the diff; do not report the absence as a finding — this is the documented skip, not a gap.
 - **Outside a harness run**: a missing evidence record is a `fail` — the author owed it under §6.
 
-When the current record IS present, its row count should match the criterion count from Step 2; a mismatch is a `fail` (the harness gate will also reject, but flag it here so the agent can fix before re-invocation).
+When the current record IS present, its row count should match the criterion count from Step 2; a mismatch is a `fail`.
 
 Each row carries the author's claim: Status, Implementation (file:line), Verification (command or test), Evidence (artifact). Use these as starting points — then validate.
 
@@ -83,9 +83,11 @@ For each segment from Step 2, independently assign one of the three closed-enum 
 
 **`pass`** — The diff implements the criterion, the evidence row's Implementation `file:line` points to code that actually does what the criterion describes (open the file and confirm), and Verification is a runnable command or real test path.
 
-**`partial`** — Criterion is addressed but a named sub-aspect is not met. Examples: "remains readable with 500 ticks" but only tested at 87; "tooltip shows X, Y, Z" but tooltip shows X and Y only; criterion demands empirical test and evidence offers algorithmic reasoning only.
+**`partial`** — The diff addresses the criterion — code in it does or starts part of what the criterion describes — but a sub-aspect the criterion names is not met. A named behaviour left as a stub or a `TODO` behind code the diff does add is `partial`. Examples: "remains readable with 500 ticks" but only tested at 87; "tooltip shows X, Y, Z" but tooltip shows X and Y only; criterion demands empirical test and evidence offers algorithmic reasoning only; "`--since <date>` prints only later entries" but the diff parses the date and leaves the filter a `TODO`.
 
-**`fail`** — No `file:line` in the diff implements the criterion, OR the claimed `file:line` does not exist, OR the claimed `file:line` exists but does not implement what the criterion describes.
+The unmet sub-aspect must be one the criterion's text names. A concern the criterion does not name — a hard-coded literal that still says what the criterion asks, a detail it does not ask to be tested, an evidence `file:line` a few lines off the code you confirmed — goes in the note and never lowers `pass`. Pick one status per criterion and stand by it; a note that says the criterion is met carries `pass`.
+
+**`fail`** — Nothing in the diff addresses the criterion: no `file:line` in the diff touches it, OR the claimed `file:line` does not exist, OR the claimed `file:line` exists but does no part of what the criterion describes. When the diff does part of the criterion, the status is `partial`, however large the missing part, and never `fail`.
 
 For each criterion, validate the author's claim yourself:
 
@@ -103,9 +105,9 @@ There is no third branch. Acceptance carries no follow-up budget — a bead with
 
 ### Step 7. Emit `report.json`
 
-Output a single JSON object — no prose, no markdown, no code fences. The Reviewer subprocess writes the JSON to `.djinn/state/<session>/<bead-id>/iter-N/report.json` via the harness's atomic-write helper; a `/verify-acceptance` Skill-tool invocation by the Author emits the same JSON object inline.
+Output a single JSON object — no prose, no markdown, no code fences. A `/verify-acceptance` Skill-tool invocation emits it inline.
 
-The canonical schema is `Report` / `Criterion` in `djinn/internal/djinn/report/report.go`:
+The object has this shape:
 
 ```json
 {
@@ -124,22 +126,18 @@ The canonical schema is `Report` / `Criterion` in `djinn/internal/djinn/report/r
 
 The accept-path shape above omits `suggested_change` because it has no remediation to record. The rejection example below shows it in use.
 
-Validation rules enforced by `report.Parse` (`djinn/internal/djinn/report/validate.go`):
+Shape rules:
 
 - `complete` MUST be present and a bool.
-- `criteria` MUST be present (an array; may be empty at the Parse seam — the evidence gate enforces the count match against the bead's parsed criteria downstream).
+- `criteria` MUST be present: an array with one entry per criterion from Step 2.
 - `reason` MUST be a string or null.
-- Each `status` MUST be `"pass"`, `"partial"`, or `"fail"` — any other value, or an absent `status` key, is rejected.
+- Each `status` MUST be present and one of `"pass"`, `"partial"` or `"fail"` — never any other value.
 - Each `note` MUST be non-empty.
 - `suggested_change` is optional; omit the key when not used.
-- Top-level and per-criterion keys outside this schema are rejected (`DisallowUnknownFields`) — defends against a Reviewer regression smuggling a `verdict` shadow field.
-- Exactly one JSON value per document — a stray second object or any trailing token after the first JSON value is rejected.
-
-Convention (not enforced by `Parse`, but the harness's rollback path expects it): when `complete: false`, fill `reason` with a non-null one-line summary so `rejection.json` carries useful forensic context.
-
-Cross-cutting structural check enforced by the artifacts gate (not `Parse`): each `diff_files` entry MUST appear in `git diff --name-only <base>..HEAD`.
-
-`report.IsAccept` (`djinn/internal/djinn/report/accept.go`) is the strict-mode helper the harness calls: it returns `(true, nil)` only when `complete=true` AND every `status=="pass"`; otherwise it returns `(false, reasons)` and the iteration is rolled back.
+- Add no top-level or per-criterion key outside this shape — no `verdict` shadow field.
+- Emit exactly one JSON value — no stray second object and no trailing token after the first JSON value.
+- When `complete: false`, fill `reason` with a non-null one-line summary naming which criteria gated rejection.
+- Each `diff_files` entry MUST appear in `git diff --name-only <base>..HEAD`.
 
 ## Example — rejection path
 
@@ -161,8 +159,8 @@ Any non-pass criterion forces `complete: false`:
 - **Adding criteria the bead does not name.** If the author did not write "keyboard shortcut to reset filters," the absence of that shortcut is not a finding.
 - **Judging code quality.** Leave style, readability, architecture to `/review`. This skill judges *coverage of promises*, not code health.
 - **"Probably pass."** If you cannot validate the `file:line` claim by opening the file, the status is `partial` or `fail` — not `pass` with a caveat.
-- **Marking `complete: true` with mixed-status criteria.** This is the original 3-iteration halt incident's failure mode. Strict mode requires *every* criterion at `pass`; the schema validator and `IsAccept` reject the mismatch and the iteration rolls back.
-- **Inventing a fourth status.** The enum is closed: `pass | partial | fail`. `report.Status.UnmarshalJSON` rejects every other value at the JSON boundary.
+- **Marking `complete: true` with mixed-status criteria.** This is the original 3-iteration halt incident's failure mode. Strict mode requires *every* criterion at `pass`; one `partial` or `fail` means `complete: false`.
+- **Inventing a fourth status.** The enum is closed: `pass | partial | fail`. Never write any other value.
 - **Rubber-stamping the evidence comment.** The evidence comment is the author's claim. Your job is to validate, not quote it back.
 - **Empirical-vs-algorithmic laundering.** If the criterion names a concrete threshold (latency, count, scale), evidence needs that concrete number. Algorithmic reasoning is `partial` at best.
-- **Wrapping output in code fences or prose.** `report.Parse` reads raw JSON. Markdown decoration trips schema validation and the iteration is rejected as malformed.
+- **Wrapping output in code fences or prose.** The output is raw JSON, one object and nothing else. Markdown decoration makes it something other than the `report.json` shape.
