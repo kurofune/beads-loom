@@ -61,6 +61,23 @@ force-push, closing work as won't-do) or a taste call with no default goes on
 to step 3, whose defer command records it for the operator. Anything else with an obvious default
 or an undo, you do and report in one `say` line.
 
+**A design hand-off.** The design review hands a bead back in one of two ways,
+named by its newest note:
+
+- `deferred (lead rules): ` (label `lead-rules`): round 3 ended with a P0 or P1
+  still open, each quoted with its harm. A `lead rules` design hand-off is ruled
+  by the lead, never put to the operator: rewrite the bead or its criteria
+  (step 4) so each quoted finding is settled, make the config allowance it
+  names, or requeue it as it stands. Requeue it as the needs-you requeue action
+  does, `lead-rules` with it:
+  `bd update <bead-id> --status open --remove-label=needs-operator --remove-label=answered --remove-label=lead-rules`.
+  Only when the fix itself needs spend, an irreversible change or a taste call
+  do you hand it over: step 3's defer command, then
+  `bd update <bead-id> --remove-label=lead-rules --add-label=lead-escalated`.
+- `deferred (operator-only): ` (label `lead-escalated`): the reviewer flagged a
+  finding only the operator can answer. Only a deferral marked `operator-only`
+  puts a question to the operator: go on to step 3.
+
 3. Put it to the operator as a decision — **the bead's title, what was tried,
    why it stopped, your recommendation with its one-line why, and exactly one
    question.** Explain in everyday words, for someone who has never seen this
