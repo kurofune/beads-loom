@@ -720,8 +720,9 @@ step's work does not crowd the orchestrator's context. Route by step id:
   **The already-done check comes first (fresh run only).** On a fresh run
   (Step 2b, as for `implement`'s exit below), before any design subagent,
   dispatch ONE read-only subagent on the `design` step's resolved adapter,
-  model and effort with the prompt `buildAlreadyDoneCheckPrompt` renders
-  (`design_step.go`): the bead block and one question — does every acceptance
+  model and effort with the prompt
+  `buildAlreadyDoneCheckPrompt` renders (`internal/djinn/session/design_step.go`):
+  the bead block and one question — does every acceptance
   criterion already hold at HEAD? It returns `already-done` with the
   `file:line` or command output proving each criterion, or `not done` with the
   first unmet one. On `already-done`, take `implement`'s **close-and-skip**
@@ -755,7 +756,8 @@ step's work does not crowd the orchestrator's context. Route by step id:
   and its design approved before any code is written. Append the approved note
   (the note in force when the design loop passed, §4c `loop-with-design-review`)
   to the dispatch under `## The approved design note`, with the rule
-  `implementDesignRule` states (`design_step.go`): build to the note; the
+  `implementDesignRule` states (`internal/djinn/session/design_step.go`):
+  build to the note; the
   criteria win where they disagree; any departure carries a
   `Design departure: <what changed> — <why>` line in the body of the commit
   that departs. Dispatch the `implement` step
