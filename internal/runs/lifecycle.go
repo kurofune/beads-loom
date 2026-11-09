@@ -212,7 +212,7 @@ func BuildRun(id, project string, source RunSource, events []LifecycleEvent) Run
 	for _, ev := range events {
 		b, ok := idx[ev.Bead]
 		if !ok {
-			if ev.Kind != KindSpawn && ev.Kind != KindRestart && ev.Kind != KindExit {
+			if !isBeadTransition(ev.Kind) {
 				// A round row (or any kind this code does not model) for a
 				// bead the group does not hold is liveness, not membership.
 				continue

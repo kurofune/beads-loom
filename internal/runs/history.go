@@ -363,7 +363,11 @@ func (h *History) RunAt(p Project, at time.Time) (Run, bool) {
 	if err != nil {
 		return Run{}, false
 	}
-	// List is newest first.
+	return runAt(runs, at)
+}
+
+// runAt is RunAt's rule over a newest-first run list.
+func runAt(runs []Run, at time.Time) (Run, bool) {
 	for _, r := range runs {
 		if !r.StartedAt.After(at) {
 			return r, true
