@@ -332,11 +332,38 @@ func findRun(runs []Run, runID string) *Run {
 		}
 	}
 	for i := range runs {
-		if runs[i].Source == SourceExternal && legacyExternalRunID(runs[i].StartedAt) == runID {
+		if alias, ok := legacyAlias(runs[i]); ok && alias == runID {
 			return &runs[i]
 		}
 	}
 	return nil
+}
+
+// legacyAlias is the id an external run had before ExternalRunID named the
+// project. A Loom-started run never had another id.
+func legacyAlias(run Run) (string, bool) {
+	if run.Source != SourceExternal {
+		return "", false
+	}
+	return legacyExternalRunID(run.StartedAt), true
+}
+
+// IDs is every id Get resolves in p: each run's id and each external run's
+// legacy alias, so a citation written in either form is recognized the way a
+// link to it opens.
+func (h *History) IDs(p Project) ([]string, error) {
+	list, err := h.List(p)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, len(list))
+	for _, run := range list {
+		ids = append(ids, run.ID)
+		if alias, ok := legacyAlias(run); ok {
+			ids = append(ids, alias)
+		}
+	}
+	return ids, nil
 }
 
 func parseConsoleFile(path string) *ConsoleParse {

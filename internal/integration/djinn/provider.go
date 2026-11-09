@@ -201,15 +201,7 @@ func (p *Provider) handlers(deps integration.Deps) *handlers {
 
 // RunIDs implements integration.RunLister.
 func (p *Provider) RunIDs(project, workdir string) ([]string, error) {
-	list, err := p.history.List(runs.Project{Name: project, Workdir: workdir})
-	if err != nil {
-		return nil, err
-	}
-	ids := make([]string, 0, len(list))
-	for _, run := range list {
-		ids = append(ids, run.ID)
-	}
-	return ids, nil
+	return p.history.IDs(runs.Project{Name: project, Workdir: workdir})
 }
 
 // ProjectAdded implements integration.ProjectWatcher. Only a project with

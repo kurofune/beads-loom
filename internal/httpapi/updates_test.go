@@ -311,6 +311,44 @@ func TestInitiativeUpdatesResolveCitedRunIDsAgainstRunHistory(t *testing.T) {
 	}
 }
 
+// A citation written before external run ids named their project carries the
+// ext-<timestamp> alias. Against real external history it links exactly when
+// that alias denotes a run the project has, as History.Get resolves it.
+func TestInitiativeUpdatesResolveALegacyExternalRunCitation(t *testing.T) {
+	const legacy = "ext-20260624T074233Z"
+	const noRun = "ext-20260624T074234Z"
+	store := map[string]string{
+		updates.Key("loom-d1q", "2026-W26"): storedValue(t, "loom-d1q", "2026-W26", "draft",
+			"## Closed\n- loom-d1q.1 landed under "+legacy+
+				"\n- loom-d1q.2 started under "+noRun+"\n"),
+	}
+	s, _, _ := buildUpdatesServer(t, &updatesConn{real: map[string]bool{"loom-d1q.1": true}}, func(workdir string) integration.Set {
+		logDir := runs.Project{Name: "loom", Workdir: workdir}.LegacySummonerLogDir()
+		if err := os.MkdirAll(logDir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		writeFile(t, filepath.Join(logDir, "2026-06-24.log"),
+			"2026-06-24T07:42:33Z\tloom-d1q.1\tspawn\n"+
+				"2026-06-24T07:55:50Z\tloom-d1q.1\texit\tCOMPLETE\tclosed\n")
+		return integration.Set{djinn.New(djinn.Options{StateDir: t.TempDir()})}
+	})
+	s.bd = bdexec.New(kvBackedRunner(store))
+
+	rec := do(t, s, http.MethodGet, "/api/projects/loom/initiatives/loom-d1q/updates", "")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body %s)", rec.Code, rec.Body.String())
+	}
+	var got struct {
+		KnownRunIDs []string `json:"knownRunIds"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(got.KnownRunIDs, []string{legacy}) {
+		t.Fatalf("knownRunIds = %#v, want the legacy alias of the run the history has, and not the one of no run", got.KnownRunIDs)
+	}
+}
+
 // Update history is served for every project; run history exists only for a
 // djinn project. A project without one answers with no linkable runs, not a 500.
 func TestInitiativeUpdatesReturnNoKnownRunIDsWithoutRunHistory(t *testing.T) {
