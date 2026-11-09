@@ -202,13 +202,14 @@ function RunDetailPane({
   const qc = useQueryClient()
   const toast = useToast()
   const [confirmStop, setConfirmStop] = useState(false)
-  const { logLines } = useRunEvents(runId)
-
   const run = useQuery<RunDetail, ApiError>({
     queryKey: djinnKeys.run(project, runId),
     queryFn: () => api.run(project, runId),
     staleTime: 2_000,
   })
+  // A legacy link names a run by an alias; the stream carries the id the
+  // detail answers with.
+  const { logLines } = useRunEvents(run.data?.id ?? runId)
 
   const stop = useMutation<void, ApiError, void>({
     mutationFn: () => api.stopRun(project, runId),
@@ -337,7 +338,7 @@ function RunDetailPane({
           {data.summary && <SummaryCard summary={data.summary} />}
         </div>
 
-        <RunLog project={project} runId={runId} source={data.source} incoming={logLines} live={live} />
+        <RunLog project={project} runId={data.id} source={data.source} incoming={logLines} live={live} />
       </div>
 
       {confirmStop && (

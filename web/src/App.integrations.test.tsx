@@ -147,6 +147,24 @@ describe('a djinn project with runs', () => {
     expect(requests).toContain(`/api/projects/loom/x/djinn/runs/${RUN.id}`)
   })
 
+  // A link written before external run ids named their project still opens
+  // the run, and the server streams its lines under the id the detail returns.
+  it('tails a run opened by its legacy id under the canonical id', async () => {
+    const legacy = 'ext-20261030T100000Z'
+    const canonical = `${legacy}-0a1b2c3d`
+    const detail = { ...RUN, id: canonical, state: 'running', endedAt: undefined, activeSlots: [] }
+    await mountAt(`/loom/runs/${legacy}`, [testProject('loom', DJINN)], (pathname) =>
+      pathname.endsWith(`/x/djinn/runs/${legacy}`) ? detail : null,
+    )
+    await until(() => text().includes('Console'))
+    const { runLogs } = await import('@/integrations/djinn/run-log-store')
+    await act(async () => {
+      runLogs.append(canonical, ['appended lifecycle line'])
+    })
+    await settle(10)
+    expect(text().split('appended lifecycle line')).toHaveLength(2)
+  })
+
   it('lists run history when djinn has runs but cannot dispatch', async () => {
     await mountAt('/loom/runs', [testProject('loom', DJINN_NO_DISPATCH)])
     await until(() => text().includes(RUN.id))
