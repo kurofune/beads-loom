@@ -2,7 +2,7 @@
 
 **Mode:** post-launch.
 **Goal:** keep Loom working for any beads user: public CI green, review follow-ups worked down.
-**Last change:** filed 4 beads from the implicit-state-machine survey: loom-csz, loom-0mj, loom-3nh, loom-6p7.
+**Last change:** the council (Astra + Fable) review rewrote the 4 state-machine beads: loom-csz, loom-0mj, loom-3nh, loom-6p7.
 
 ## State
 
@@ -14,7 +14,7 @@
   inside the djinn integration, whose backend seam now exists. loom-0zj.3 is live again.
 - Graph: closed. Open spin-off: loom-pks (Initiatives chained count, P4).
 - 6 `review-follow-up` beads open, all `proposed` (triage decides): loom-suh, loom-dxf (P2); loom-l3f, loom-k8j, loom-jy7, loom-ucz (P3, IMPORTANT findings left when a review ran out of attempts).
-- State-machine beads (`state-machine` label, approved, ready): loom-csz project health state, loom-0mj run log race (P2); loom-3nh run transition table, loom-6p7 dialog pending flags (P3).
+- State-machine beads (`state-machine` label, approved, ready): loom-csz project health state, loom-0mj run log frozen past 3,000 lines (P2); loom-3nh managed run state in one place, loom-6p7 dialog pending flags (P3).
 - loom-gkp (P2, `proposed`, in triage): an Enter that confirms an IME composition submits fields app-wide; only the title editor guards it.
 - Settled surfaces, each ruled in DECISIONS.md — do not relitigate without new
   evidence: the 200-row ceiling (loom-jhd/7qh/nlm), Backlog paging by reachable
