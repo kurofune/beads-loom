@@ -54,7 +54,9 @@ Before any start, run `djinn drain alive` and refuse on `alive` or `unknown`
   (`workshop.codex_window.pause_past_limit`, default true), every further Codex
   step is paid from that balance: the tick starts no drain and a running drain
   starts no new bead while its running ones finish. `djinn workshop spend`
-  overrides it through the reset.
+  overrides it through the reset. Triage, the pre-filing check and consult hold
+  their Codex calls under the same pace and the same override: triage waits,
+  and consult runs only the models that cost nothing extra.
 
 ```say
 Starting the drain now: at most <max-beads> beads, <max-retries> retries per
