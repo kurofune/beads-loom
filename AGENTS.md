@@ -247,7 +247,7 @@ with `djinn needs-you defer`. Rewrite the bead from the answer and requeue it.
 
 # Per-Bead Work Contract
 
-Always-on rules for working one bead. The steps themselves live in the formula (`djinn formula describe --embedded iter --json`; shapes in `core/SHAPE-REGISTRY.md`), `/wish`, and the skills each step names; this page holds only the rules they share. Every iter formula runs claim → design → design-review-loop → implement → review-loop → regression-loop → commit-push.
+Always-on rules for working one bead. The steps themselves live in the formula (`djinn formula describe --embedded iter --json`; shapes in `core/SHAPE-REGISTRY.md`), `/wish`, and the skills each step names; this page holds only the rules they share. Every iter formula runs claim → design → design-review-loop → implement → review-loop → regression-loop → slow-loop → commit-push.
 
 ## 1. Work a bead only through /wish or a drain
 
