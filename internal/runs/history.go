@@ -18,8 +18,35 @@ type Project struct {
 // DjinnDir is <workdir>/.djinn.
 func (p Project) DjinnDir() string { return filepath.Join(p.Workdir, ".djinn") }
 
-// SummonerLogDir is where summoner writes its per-day lifecycle logs.
-func (p Project) SummonerLogDir() string { return filepath.Join(p.DjinnDir(), "summoner-logs") }
+// LegacySummonerLogDir is where summoner wrote its per-day lifecycle logs
+// before djinn moved its drain records under the git common dir. A repo that
+// drained before the move still has its history here.
+func (p Project) LegacySummonerLogDir() string {
+	return filepath.Join(p.DjinnDir(), "summoner-logs")
+}
+
+// RunDir is djinn's drain-record directory, <git common dir>/djinn. It is
+// shared by every worktree of the repo; it errors when the workdir is in no
+// git repo.
+func (p Project) RunDir() (string, error) {
+	common, err := GitCommonDir(p.Workdir)
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(common, "djinn"), nil
+}
+
+// SummonerLogDirs lists the directories that may hold per-day lifecycle logs,
+// in read order: the current location under RunDir when it resolves, then the
+// legacy one. A directory that does not exist stays in the list; readers treat
+// it as empty.
+func (p Project) SummonerLogDirs() []string {
+	var dirs []string
+	if run, err := p.RunDir(); err == nil {
+		dirs = append(dirs, filepath.Join(run, "summoner-logs"))
+	}
+	return append(dirs, p.LegacySummonerLogDir())
+}
 
 // StateDir is where djinn workers write per-bead state.
 func (p Project) StateDir() string { return filepath.Join(p.DjinnDir(), "state") }
@@ -136,7 +163,7 @@ type managedWindow struct {
 // externalRuns synthesizes runs from lifecycle activity that no managed run
 // accounts for.
 func (h *History) externalRuns(p Project, managed []Run) ([]Run, error) {
-	logs, err := LifecycleLogsIn(p.SummonerLogDir())
+	logs, err := LifecycleLogsIn(p.LegacySummonerLogDir())
 	if err != nil {
 		return nil, err
 	}
@@ -308,7 +335,7 @@ func parseConsoleFile(path string) *ConsoleParse {
 // Invalidate drops the cached parse for a project's logs, so the next read
 // re-parses. The fsnotify watcher calls this on change.
 func (h *History) Invalidate(p Project) {
-	dir := p.SummonerLogDir()
+	dir := p.LegacySummonerLogDir()
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	for path := range h.cache {

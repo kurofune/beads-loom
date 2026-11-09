@@ -308,7 +308,7 @@ func TestRunListIncludesExternalRuns(t *testing.T) {
 	body := "2026-06-24T00:42:33-07:00\tdjinn-gggc\tspawn\n" +
 		"2026-06-24T00:55:50-07:00\tdjinn-gggc\texit\tCOMPLETE\tclosed\n"
 	if err := os.WriteFile(
-		filepath.Join(f.project.SummonerLogDir(), "2026-06-24.log"), []byte(body), 0o644); err != nil {
+		filepath.Join(f.project.LegacySummonerLogDir(), "2026-06-24.log"), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

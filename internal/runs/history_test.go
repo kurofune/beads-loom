@@ -11,7 +11,7 @@ import (
 // writeLifecycle drops a lifecycle log into a project's summoner-logs.
 func writeLifecycle(t *testing.T, p Project, name, body string) {
 	t.Helper()
-	if err := os.WriteFile(filepath.Join(p.SummonerLogDir(), name), []byte(body), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(p.LegacySummonerLogDir(), name), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -21,8 +21,8 @@ func TestProjectPaths(t *testing.T) {
 	if p.DjinnDir() != "/w/.djinn" {
 		t.Errorf("DjinnDir = %q", p.DjinnDir())
 	}
-	if p.SummonerLogDir() != "/w/.djinn/summoner-logs" {
-		t.Errorf("SummonerLogDir = %q", p.SummonerLogDir())
+	if p.LegacySummonerLogDir() != "/w/.djinn/summoner-logs" {
+		t.Errorf("SummonerLogDir = %q", p.LegacySummonerLogDir())
 	}
 	if p.StateDir() != "/w/.djinn/state" {
 		t.Errorf("StateDir = %q", p.StateDir())
@@ -215,7 +215,7 @@ func TestHistoryIgnoresNonLifecycleFiles(t *testing.T) {
 func TestHistoryCachesByModTime(t *testing.T) {
 	p := djinnProject(t, "djinn")
 	h := NewHistory(NewStore(t.TempDir()), nil)
-	path := filepath.Join(p.SummonerLogDir(), "2026-06-16.log")
+	path := filepath.Join(p.LegacySummonerLogDir(), "2026-06-16.log")
 
 	writeLifecycle(t, p, "2026-06-16.log", "2026-06-16T00:06:28-07:00\tdjinn-a\tspawn\n")
 	first, err := h.events(path)
@@ -715,7 +715,7 @@ func TestN1IdleTickPreservesHistoryCache(t *testing.T) {
 	h := NewHistory(m.Store(), m)
 
 	writeLifecycle(t, p, "2026-06-16.log", "2026-06-16T00:06:28-07:00\tdjinn-a\tspawn\n")
-	path := filepath.Join(p.SummonerLogDir(), "2026-06-16.log")
+	path := filepath.Join(p.LegacySummonerLogDir(), "2026-06-16.log")
 	if _, err := h.events(path); err != nil {
 		t.Fatal(err)
 	}

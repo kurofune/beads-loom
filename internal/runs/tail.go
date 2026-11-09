@@ -97,7 +97,7 @@ func (w *Watcher) startFSNotify(ctx context.Context, notify chan<- struct{}) fun
 	}
 
 	added := false
-	for _, dir := range []string{w.project.SummonerLogDir(), w.project.StateDir()} {
+	for _, dir := range []string{w.project.LegacySummonerLogDir(), w.project.StateDir()} {
 		if _, err := os.Stat(dir); err != nil {
 			continue
 		}
@@ -253,7 +253,7 @@ func (w *Watcher) foldLifecycle(runID string) {
 		return
 	}
 
-	paths, err := LifecycleLogsSince(w.project.SummonerLogDir(), run.StartedAt)
+	paths, err := LifecycleLogsSince(w.project.LegacySummonerLogDir(), run.StartedAt)
 	if err != nil || len(paths) == 0 {
 		return
 	}
