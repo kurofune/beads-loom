@@ -121,11 +121,25 @@ follow along while they work.
   WOULD dispatch, no mutation), `--preflight` (per-bead LLM check for operator-required
   criteria; heavier; mutually exclusive with --dry-run), `--max-workers` (default 3),
   `--max-beads`, `--no-push`, `--poll-interval` (30s), `--max-retries`,
-  `--log-dir` (default `.djinn/summoner-logs`).
+  `--log-dir`.
 - Summoner runs in the project's git workdir. It spawns djinn workers in temp worktrees.
-- **Lifecycle log** `.djinn/summoner-logs/YYYY-MM-DD.log` — TSV:
-  `RFC3339-local \t bead-id \t spawn` and
-  `RFC3339 \t bead-id \t exit \t COMPLETE|FAILED \t closed|open|<halt reason>`.
+- **Drain records** live under the repo's git common dir,
+  `$(git rev-parse --git-common-dir)/djinn/` (`summoner-logs/`, `summoner-state.json`),
+  shared by every worktree. Older djinn wrote them to `<workdir>/.djinn/summoner-logs/`.
+  Loom reads per-day lifecycle logs from both, common-dir first
+  (`runs.Project.SummonerLogDirs`; `runs.GitCommonDir` resolves the common dir from the
+  filesystem, a linked worktree through its `commondir` file, with no git process).
+  Per-bead worker state (`.djinn/state/`) and evidence (`.djinn/evidence/`) stay
+  under the workdir.
+- **Lifecycle log** `<summoner-logs>/YYYY-MM-DD.log` — TSV:
+  `RFC3339-local \t bead-id \t spawn|restart`,
+  `RFC3339 \t bead-id \t exit \t COMPLETE|FAILED \t closed|open|<halt reason>` and
+  `RFC3339 \t bead-id \t round \t <loop> \t iter \t <n> \t <state>` (a formula
+  loop's iteration: counts as activity when grouping runs, never creates a bead).
+  The run watcher tails these logs by byte offset and streams each new complete line
+  as a `run-log` event — under the Loom-managed run's id, or under the external
+  `ext-…` run id the Runs tab lists for that instant — so a drain started at a
+  terminal streams live too.
 - **Console log** `console-YYYY-MM-DD.log` — ANSI-colored stream; per-step lines like
   `✅ Done [verify-impl iter 2/3] (cost: $0.8135, ctx: 6%, dur=1m26.3s)` and an
   end-of-session block:

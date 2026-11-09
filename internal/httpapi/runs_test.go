@@ -25,7 +25,23 @@ type runsFixture struct {
 	provider *djinn.Provider
 	mgr      *runs.Manager
 	store    *runs.Store
+	// logDir is where summoner writes lifecycle logs in this fixture's layout.
+	logDir string
 }
+
+// runsLayout is where a fixture's djinn writes its drain records.
+type runsLayout int
+
+const (
+	// layoutLegacy: <workdir>/.djinn/summoner-logs, workdir in no git repo.
+	layoutLegacy runsLayout = iota
+	// layoutCommonDir: workdir is a main checkout; logs live only under
+	// <workdir>/.git/djinn/summoner-logs.
+	layoutCommonDir
+	// layoutLinkedWorktree: workdir is a linked worktree whose common dir is
+	// another checkout's .git; logs live only under that common dir.
+	layoutLinkedWorktree
+)
 
 func newRunsServer(t *testing.T, withDjinn bool) runsFixture {
 	t.Helper()
@@ -36,11 +52,40 @@ func newRunsServer(t *testing.T, withDjinn bool) runsFixture {
 // the fake summoner and StateDir to a temp dir.
 func newRunsServerWith(t *testing.T, withDjinn bool, opts djinn.Options) runsFixture {
 	t.Helper()
+	return newRunsServerIn(t, withDjinn, layoutLegacy, opts)
+}
+
+// newRunsServerIn is newRunsServerWith in a chosen drain-record layout.
+func newRunsServerIn(t *testing.T, withDjinn bool, layout runsLayout, opts djinn.Options) runsFixture {
+	t.Helper()
 
 	workdir := t.TempDir()
+	logDir := filepath.Join(workdir, ".djinn", "summoner-logs")
 	if withDjinn {
-		for _, sub := range []string{".djinn", ".djinn/summoner-logs", ".djinn/state", ".djinn/evidence"} {
+		for _, sub := range []string{".djinn", ".djinn/state", ".djinn/evidence"} {
 			if err := os.MkdirAll(filepath.Join(workdir, sub), 0o755); err != nil {
+				t.Fatal(err)
+			}
+		}
+		switch layout {
+		case layoutLegacy:
+			if err := os.MkdirAll(logDir, 0o755); err != nil {
+				t.Fatal(err)
+			}
+		case layoutCommonDir:
+			logDir = filepath.Join(mkGitDir(t, workdir), "djinn", "summoner-logs")
+		case layoutLinkedWorktree:
+			mainGit := mkGitDir(t, t.TempDir())
+			own := filepath.Join(mainGit, "worktrees", "wt")
+			if err := os.MkdirAll(own, 0o755); err != nil {
+				t.Fatal(err)
+			}
+			writeFile(t, filepath.Join(own, "commondir"), "../..\n")
+			writeFile(t, filepath.Join(workdir, ".git"), "gitdir: "+own+"\n")
+			logDir = filepath.Join(mainGit, "djinn", "summoner-logs")
+		}
+		if layout != layoutLegacy {
+			if err := os.MkdirAll(logDir, 0o755); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -87,6 +132,25 @@ func newRunsServerWith(t *testing.T, withDjinn bool, opts djinn.Options) runsFix
 		provider: provider,
 		mgr:      provider.Manager(),
 		store:    provider.Store(),
+		logDir:   logDir,
+	}
+}
+
+// mkGitDir makes dir a main checkout (.git holding HEAD) and returns its .git.
+func mkGitDir(t *testing.T, dir string) string {
+	t.Helper()
+	gitDir := filepath.Join(dir, ".git")
+	if err := os.MkdirAll(gitDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(gitDir, "HEAD"), "ref: refs/heads/main\n")
+	return gitDir
+}
+
+func writeFile(t *testing.T, path, body string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+		t.Fatal(err)
 	}
 }
 
@@ -300,6 +364,62 @@ func TestSummonRejectsNegativeKnobs(t *testing.T) {
 }
 
 // --- history / detail ------------------------------------------------------
+
+// TestRunListIncludesRunsFromTheGitCommonDir: current djinn writes its drain
+// records under <git common dir>/djinn, in a main checkout and a linked
+// worktree alike; <workdir>/.djinn/summoner-logs does not exist.
+func TestRunListIncludesRunsFromTheGitCommonDir(t *testing.T) {
+	for name, layout := range map[string]runsLayout{
+		"main checkout":   layoutCommonDir,
+		"linked worktree": layoutLinkedWorktree,
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := newRunsServerIn(t, true, layout, djinn.Options{})
+			if _, err := os.Stat(f.project.LegacySummonerLogDir()); !os.IsNotExist(err) {
+				t.Fatalf("legacy summoner-logs exists (err=%v); the fixture must not have it", err)
+			}
+
+			body := "2026-11-08T00:00:10-08:00\tdjinn-fqmlg\tspawn\n" +
+				"2026-11-08T00:00:44-08:00\tdjinn-fqmlg\tround\treview-loop\titer\t2\tfail\n" +
+				"2026-11-08T00:02:36-08:00\tdjinn-fqmlg\tround\treview-loop\titer\t3\tpass\n" +
+				"2026-11-08T00:05:00-08:00\tdjinn-fqmlg\texit\tCOMPLETE\tclosed\n"
+			writeFile(t, filepath.Join(f.logDir, "2026-11-08.log"), body)
+
+			rec := do(t, f.server, http.MethodGet, "/api/projects/djinn/x/djinn/runs", "")
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d (body: %s)", rec.Code, rec.Body.String())
+			}
+			var list struct {
+				Runs []runs.Run `json:"runs"`
+			}
+			if err := json.Unmarshal(rec.Body.Bytes(), &list); err != nil {
+				t.Fatal(err)
+			}
+			if len(list.Runs) != 1 {
+				t.Fatalf("runs = %+v, want the drain from the git common dir", list.Runs)
+			}
+			r := list.Runs[0]
+			if r.Source != runs.SourceExternal || r.State != runs.StateFinished {
+				t.Errorf("source/state = %q/%q", r.Source, r.State)
+			}
+			if len(r.Beads) != 1 || r.Beads[0].ID != "djinn-fqmlg" || r.Beads[0].Verdict != runs.VerdictComplete {
+				t.Errorf("beads = %+v, want djinn-fqmlg COMPLETE", r.Beads)
+			}
+
+			rec = do(t, f.server, http.MethodGet, "/api/projects/djinn/x/djinn/runs/"+r.ID, "")
+			if rec.Code != http.StatusOK {
+				t.Fatalf("detail status = %d (body: %s)", rec.Code, rec.Body.String())
+			}
+			var detail runs.RunDetail
+			if err := json.Unmarshal(rec.Body.Bytes(), &detail); err != nil {
+				t.Fatal(err)
+			}
+			if detail.ID != r.ID || len(detail.Beads) != 1 {
+				t.Errorf("detail = %+v", detail)
+			}
+		})
+	}
+}
 
 func TestRunListIncludesExternalRuns(t *testing.T) {
 	f := newRunsServer(t, true)
