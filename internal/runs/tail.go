@@ -348,7 +348,9 @@ func (w *Watcher) streamExternal(fresh []freshLine) {
 	if len(fresh) == 0 || w.history == nil {
 		return
 	}
-	// One List per pass, not one per line: RunAt's rule over the same list.
+	// One List per pass, not one RunAt per line: List stats every per-day log
+	// and groups every event, so a burst of N fresh lines would pay that N
+	// times on each 500ms tick. runAt is RunAt's rule over the same list.
 	runs, err := w.history.List(w.project)
 	if err != nil {
 		return
