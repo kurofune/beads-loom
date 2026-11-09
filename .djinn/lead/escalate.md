@@ -45,7 +45,7 @@ harness stops, as examples:
 - a review loop exhausted on a test that passes at HEAD
 
 For a harness stop, requeue it at once with step 5's
-`bd update <bead-id> --status open --remove-label=needs-operator`, confirm with
+`djinn needs-you act requeue <bead-id>`, confirm with
 step 5's `bd ready` check, and report it in one block that ends with no
 question — no defer, no rewrite:
 
@@ -68,12 +68,11 @@ named by its newest note:
   still open, each quoted with its harm. A `lead rules` design hand-off is ruled
   by the lead, never put to the operator: rewrite the bead or its criteria
   (step 4) so each quoted finding is settled, make the config allowance it
-  names, or requeue it as it stands. Requeue it as the needs-you requeue action
-  does, `lead-rules` with it:
-  `bd update <bead-id> --status open --remove-label=needs-operator --remove-label=answered --remove-label=lead-rules`.
+  names, or requeue it as it stands with `djinn needs-you act requeue <bead-id>`,
+  which takes `needs-operator`, `answered` and `lead-rules` off in one write.
   Only when the fix itself needs spend, an irreversible change or a taste call
-  do you hand it over: step 3's defer command, then
-  `bd update <bead-id> --remove-label=lead-rules --add-label=lead-escalated`.
+  do you hand it over: step 3's defer command with `--escalate`, which puts
+  `lead-escalated` on and takes `lead-rules` off in the same write.
 - `deferred (operator-only): ` (label `lead-escalated`): the reviewer flagged a
   finding only the operator can answer. Only a deferral marked `operator-only`
   puts a question to the operator: go on to step 3.
@@ -103,8 +102,11 @@ named by its newest note:
 djinn needs-you defer <bead-id> --recommend <a|b> --because "<why you recommend that answer, in one line of everyday words>" --what "<2-4 sentences in everyday words: what is wrong or proposed today, what would change, what the operator would notice; no file paths, bead ids or code names>" \
   --why "<why only the operator can decide>" \
   --question "<one question>" --a "<first answer>" --b "<second answer>" \
-  --a-does <requeue|close-landed|close-wontdo|approve|decline|rewrite> --b-does <…>
+  --a-does <requeue|close-landed|close-wontdo|approve|decline|rewrite> --b-does <…> [--escalate]
 ```
+
+   Add `--escalate` when you hand over a bead a design hand-off left to you
+   (`lead-rules`): it goes straight to the operator, labelled `lead-escalated`.
 
 ```say
 <bead title> did not land.
@@ -133,7 +135,7 @@ Commits printed: the work has landed. Close the bead and tell the operator; no
 rewrite, and never reopen it:
 
 ```bash
-bd close <bead-id> --reason "landed: already on origin/main at <sha7>"
+djinn needs-you act close-landed <bead-id> already on origin/main at <sha7>
 ```
 
 ```say
@@ -183,11 +185,12 @@ bd update <bead-id> --acceptance="$(cat /tmp/ac.md)"
    the harness gives a bead back it sets **both** `status=deferred` **and** a
    `needs-operator` label. `bd ready` only looks at status, so reopening alone
    does restore readiness, but the stale label leaves the bead still reading as
-   waiting on a human — which is the exact signal this lead speaks in. Drop it
-   in the same update:
+   waiting on a human — which is the exact signal this lead speaks in. The
+   requeue action drops it in the same write, with `answered` and `lead-rules`,
+   and keeps `lead-escalated` and the evidence labels:
 
 ```bash
-bd update <bead-id> --status open --remove-label=needs-operator --remove-label=answered
+djinn needs-you act requeue <bead-id>
 ```
 
 "Queued" means exactly one thing: `bd ready --json` lists that id. Check it,
@@ -306,8 +309,9 @@ epic, the `from:seat:lead` label, touches listing every file the fix and its
 tests change, notes `Source: re-authored from <id>; the operator's answer: <text>`
 — filed `seat-approved` when the charter's `## Self-approval` names it (a real
 defect in landed work), `proposed` otherwise; then
-`bd close <id> --reason "re-authored as <new-id>"`. When the answer is to do
-nothing, `bd close <id> --reason "won't do: <the operator's answer>"`. Then add
+`djinn needs-you act close-wontdo <id> re-authored as <new-id>`. When the answer
+is to do nothing, `djinn needs-you act close-wontdo <id> <the operator's answer>`;
+each closes it with the note `won't do: <its words>`. Then add
 the signed comment as above; `bd comments add` works on a closed bead.
 
 An `idea:` item, or an idea the digest lists under Ideas or Muse, asks one question in
@@ -356,14 +360,14 @@ Approve it, or decline it?
 Answer through `djinn triage`, never by hand: an epic carries its whole plan,
 and the command applies the operator's answer to the epic and every plan bead
 triage sent with it. On approve, the plan drains on the next tick — each bead
-gets `bd update <id> --status open --remove-label=proposed --remove-label=needs-operator`:
+reopens without `proposed` or `needs-operator`:
 
 ```bash
 djinn triage approve <id>
 ```
 
-On decline, each bead gets `bd update <id> --add-label=declined` and
-`bd close <id> --reason "declined: <the operator's words>"`; the `declined`
+On decline, each bead closes labelled `declined`, with the note
+`declined: <the operator's words>`; the `declined`
 label keeps every seat from proposing it again:
 
 ```bash
