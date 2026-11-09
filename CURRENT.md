@@ -2,7 +2,7 @@
 
 **Mode:** post-launch.
 **Goal:** keep Loom working for any beads user: public CI green, review follow-ups worked down.
-**Last change:** the council (Astra + Fable) review rewrote the 4 state-machine beads: loom-csz, loom-0mj, loom-3nh, loom-6p7.
+**Last change:** loom-wzf landed: the Runs tab reads djinn's drain logs from the git common dir (and the old `.djinn/` dir) and streams new lifecycle lines live.
 
 ## State
 
@@ -13,9 +13,8 @@
 - Epic deferred: Runs (loom-0zj). Its external gate is gone; its work goes
   inside the djinn integration, whose backend seam now exists. loom-0zj.3 is live again.
 - Graph: closed. Open spin-off: loom-pks (Initiatives chained count, P4).
-- 6 `review-follow-up` beads open, all `proposed` (triage decides): loom-suh, loom-dxf (P2); loom-l3f, loom-k8j, loom-jy7, loom-ucz (P3, IMPORTANT findings left when a review ran out of attempts).
+- No `review-follow-up` bead open. loom-4o2 (P2, open): discovery lists linked git worktrees as projects; config excludes `the-pit-*` until it lands.
 - State-machine beads (`state-machine` label, approved, ready): loom-csz project health state, loom-0mj run log frozen past 3,000 lines (P2); loom-3nh managed run state in one place, loom-6p7 dialog pending flags (P3).
-- loom-gkp (P2, `proposed`, in triage): an Enter that confirms an IME composition submits fields app-wide; only the title editor guards it.
 - Settled surfaces, each ruled in DECISIONS.md — do not relitigate without new
   evidence: the 200-row ceiling (loom-jhd/7qh/nlm), Backlog paging by reachable
   rows (loom-rz0), the timeline reading `events` (loom-rs5), rollup cost
@@ -26,7 +25,7 @@
 
 ## Assumptions
 
-- The summoner contract `internal/runs/` reads stays; nothing upstream retires it.
+- The summoner contract `internal/runs/` reads stays. djinn now writes its drain logs under `<git common dir>/djinn/`; Loom reads both places.
 - The public repo carries the harness; djinn's footprint shrinks later through `djinn init` (a design note for the djinn session is written; not yet handed over).
 
 ## Open questions
@@ -35,7 +34,7 @@
 
 ## Next checkpoint
 
-Next: loom-csz, then loom-0mj; loom-gkp and the 6 follow-ups once triage approves each.
+Next: loom-csz, then loom-0mj; loom-4o2.
 
 ## Stop conditions
 
