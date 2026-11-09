@@ -431,7 +431,7 @@ formula: core/iter-codex.formula.toml
   design-review-loop  —        —             —
   revise-design       codex    gpt-6-sol     high
   design-review       codex    gpt-6-astra   high
-  design-tiebreak     claude-code  fable     high
+  design-tiebreak     codex    gpt-6-astra   xhigh
   implement           codex    gpt-6-sol     high
   review-loop         —        —             —
 ```
@@ -439,15 +439,15 @@ formula: core/iter-codex.formula.toml
 The announce names `design`, `design-review` and `design-tiebreak` whenever
 the formula declares them — the default and both variants do — so the operator
 sees, before any spend, that the bead's design note is written and checked
-before code. The `design-tiebreak` row each shipped formula resolves to (the
-designer's other adapter family, a model neither the designer nor the reviewer
-uses, effort high):
+before code. The `design-tiebreak` row each shipped formula resolves to (a
+judge-grade model; in a single-vendor variant, the strongest model in it, one
+effort notch above the reviewer's high):
 
 | Formula | `design-tiebreak` adapter | model | effort |
 |---|---|---|---|
-| `iter` | `codex` | `gpt-6-sol` | `high` |
-| `iter-claude` | `codex` | `gpt-6-astra` | `high` |
-| `iter-codex` | `claude-code` | `fable` | `high` |
+| `iter` | `claude-code` | `opus[1m]` | `high` |
+| `iter-claude` | `claude-code` | `fable` | `xhigh` |
+| `iter-codex` | `codex` | `gpt-6-astra` | `xhigh` |
 
 **Stop ONLY on disagreement.** After printing the announce, compare the walked
 formula against Step 1a's **shadow resolution**. When
@@ -1408,9 +1408,10 @@ The shipped pins (operator ruling 2026-09-25, guarded by
 `core/variant_formula_knobs_test.go` and
 `TestDefaultReviewModel_CrossFamilyFromImplement`): Claude builds, Astra reviews.
 `design` and `revise-design` take `implement`'s knobs and `design-review`
-takes `review`'s. `design-tiebreak` runs on the adapter family other than the
-designer's, on a model neither the designer nor the reviewer uses, at effort
-high (Step 2c's tiebreak table), so the judge outranks the builder. `implement` = opus[1m] / high; `review` = codex / high with NO model line —
+takes `review`'s. `design-tiebreak` runs on a judge-grade model (Step 2c's
+tiebreak table): Opus at high in the default, the one scoped exception to the
+judge-outranks-builder ruling; in each single-vendor variant the strongest
+model in it at xhigh, a notch above the reviewer, so the judge outranks both. `implement` = opus[1m] / high; `review` = codex / high with NO model line —
 the codex model is pinned once at the adapter, and it is the step the codex-exec
 rule above reads the resolved `gpt-6-astra` / `high` for, run READ-ONLY;
 `fix-review` and `fix-regression` = opus[1m] / high, because a fixer edits code a
@@ -1470,9 +1471,10 @@ sits between `design` and `implement`. Its args name four steps
    dispatch the tiebreak once when the round keeps open a P0 or P1 the note in
    force disputes and that no earlier ruling has judged; otherwise skip it.
    Dispatch ONE judge on the `design-tiebreak` step's resolved adapter, model
-   and effort (Step 2c's tiebreak table), read-only, with the prompt
-   `buildDesignTiebreakPrompt` renders: only those findings, their dispute
-   reasons and the note. Its sidecar is
+   and effort (Step 2c's tiebreak table), read-only, in a fresh context, with
+   the prompt `buildDesignTiebreakPrompt` renders: only those findings, their
+   dispute reasons and the note. The prompt names no adapter, model or vendor
+   of any party; add none when you dispatch it, so the judge rules blind. Its sidecar is
    `{"rulings":[{"id","ruling":"keep"|"demote","why"}]}`; save its reply to
    `<loop-id>.iter-<N>/design-tiebreak` and post it as
    `djinn design tiebreak — round <N>`. One ruling per id, ever: a ruling for
