@@ -299,7 +299,12 @@ func (w *Watcher) tailLog(path string) []freshLine {
 	w.mu.Unlock()
 	if info.Size() < offset {
 		// Truncated or replaced underneath us; start over, as drainConsole does.
+		// The reset is stored now: an emptied log returns below, and a stale
+		// offset would make the regrown log skip its first bytes.
 		offset = 0
+		w.mu.Lock()
+		w.lifecycleOffset[path] = 0
+		w.mu.Unlock()
 	}
 	if info.Size() == offset {
 		return nil

@@ -256,3 +256,45 @@ func TestWatcherRunCompletesALineTornAtStartup(t *testing.T) {
 		t.Errorf("run-log lines = %q, want exactly the completed line %q", lines, full)
 	}
 }
+
+// TestWatcherRereadsALogTruncatedToEmpty: a log cut to zero bytes and then
+// regrown past its old length is read from its start. A tick that saw it empty
+// must forget the old offset, or the regrown log is read from that stale
+// position and its first lines are lost for good.
+func TestWatcherRereadsALogTruncatedToEmpty(t *testing.T) {
+	p, logs := djinnProjectInRepo(t, "djinn")
+	hub := &recordingHub{}
+	m := newTestManager(t, hub)
+	w := NewWatcher(p, m, NewHistory(m.Store(), m), hub)
+
+	t0 := time.Now().UTC().Add(-time.Minute).Truncate(time.Second)
+	path := filepath.Join(logs, t0.Format("2006-01-02")+".log")
+	appendLog(t, path, stamp(t0)+"\tdjinn-a\tspawn\n")
+	w.tick(t.Context())
+
+	if err := os.Truncate(path, 0); err != nil {
+		t.Fatal(err)
+	}
+	w.tick(t.Context())
+	_, before := hub.runLogLines()
+
+	var want []string
+	for i, bead := range []string{"djinn-first", "djinn-second", "djinn-third"} {
+		line := stamp(t0.Add(time.Duration(i+1)*time.Second)) + "\t" + bead + "\tspawn"
+		want = append(want, line)
+		appendLog(t, path, line+"\n")
+	}
+	w.tick(t.Context())
+	w.tick(t.Context())
+
+	_, lines := hub.runLogLines()
+	got := lines[len(before):]
+	if len(got) != len(want) {
+		t.Fatalf("lines after regrowth = %q, want each of %q once", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Errorf("line %d = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
