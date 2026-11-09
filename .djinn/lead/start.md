@@ -50,6 +50,11 @@ Before any start, run `djinn drain alive` and refuse on `alive` or `unknown`
   the tick starts no drain and only the kept duties run (`keep_duties`, default
   the lead's rule, digest and inbox); a running drain starts no new bead while
   its running ones finish. `djinn workshop spend` overrides it through the reset.
+- Once the Codex week reads 100% and the account holds purchased credits
+  (`workshop.codex_window.pause_past_limit`, default true), every further Codex
+  step is paid from that balance: the tick starts no drain and a running drain
+  starts no new bead while its running ones finish. `djinn workshop spend`
+  overrides it through the reset.
 
 ```say
 Starting the drain now: at most <max-beads> beads, <max-retries> retries per
