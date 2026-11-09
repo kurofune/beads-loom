@@ -987,8 +987,8 @@ When a loop reaches `max_attempts` without a pass verdict **and** without a revi
 rescue, it is **exhausted**. The orchestrator does not just stop — it applies the
 loop's configured `on_exhausted` escalation, the interactive mirror of the
 autonomous harness's `on_exhausted` dispatch (the runtime routing is `runOneFormula` in
-`internal/djinn/session/run_formula.go`, with the per-class reason stamped by
-`classifyIterOutcome` in `internal/djinn/session/iter_beads.go`).
+`internal/djinn/session/run_formula.go`, with the per-class disposition picked by
+`ClassifyIteration` in `internal/djinn/session/disposition.go`).
 
 **Read `on_exhausted` from the loop step's `formula describe --json` block** — the
 `loop.on_exhausted` field that `djinn formula describe` emits per loop step (e.g.
