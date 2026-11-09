@@ -21,6 +21,11 @@ const (
 	KindSpawn   = "spawn"
 	KindExit    = "exit"
 	KindRestart = "restart"
+	// KindRound is a formula loop's iteration, written by current djinn for
+	// every round of every loop step. Its columns past the kind parse as
+	// Verdict = "<loop>" and Detail = "iter\t<n>\t<state>". It is liveness: it
+	// counts as activity when grouping runs but never creates a bead.
+	KindRound = "round"
 )
 
 // LifecycleEvent is one TSV row of a per-day lifecycle log.
@@ -207,6 +212,11 @@ func BuildRun(id, project string, source RunSource, events []LifecycleEvent) Run
 	for _, ev := range events {
 		b, ok := idx[ev.Bead]
 		if !ok {
+			if ev.Kind != KindSpawn && ev.Kind != KindRestart && ev.Kind != KindExit {
+				// A round row (or any kind this code does not model) for a
+				// bead the group does not hold is liveness, not membership.
+				continue
+			}
 			b = &RunBead{ID: ev.Bead, SpawnedAt: ev.At}
 			idx[ev.Bead] = b
 			order = append(order, ev.Bead)

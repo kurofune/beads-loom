@@ -163,9 +163,16 @@ type managedWindow struct {
 // externalRuns synthesizes runs from lifecycle activity that no managed run
 // accounts for.
 func (h *History) externalRuns(p Project, managed []Run) ([]Run, error) {
-	logs, err := LifecycleLogsIn(p.LegacySummonerLogDir())
-	if err != nil {
-		return nil, err
+	// Both layouts: djinn's current one under the git common dir and the
+	// legacy <workdir>/.djinn/summoner-logs. A repo that drained before and
+	// after the move has history in each, and GroupRuns sorts by time anyway.
+	var logs []string
+	for _, dir := range p.SummonerLogDirs() {
+		in, err := LifecycleLogsIn(dir)
+		if err != nil {
+			return nil, err
+		}
+		logs = append(logs, in...)
 	}
 	if len(logs) == 0 {
 		return nil, nil
@@ -335,12 +342,32 @@ func parseConsoleFile(path string) *ConsoleParse {
 // Invalidate drops the cached parse for a project's logs, so the next read
 // re-parses. The fsnotify watcher calls this on change.
 func (h *History) Invalidate(p Project) {
-	dir := p.LegacySummonerLogDir()
+	dirs := map[string]bool{}
+	for _, dir := range p.SummonerLogDirs() {
+		dirs[dir] = true
+	}
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	for path := range h.cache {
-		if filepath.Dir(path) == dir {
+		if dirs[filepath.Dir(path)] {
 			delete(h.cache, path)
 		}
 	}
+}
+
+// RunAt is the run in List(p) that an instant belongs to: the newest run whose
+// StartedAt is not after at. The watcher uses it to route a lifecycle line of a
+// drain Loom did not start to the same run id the Runs tab shows.
+func (h *History) RunAt(p Project, at time.Time) (Run, bool) {
+	runs, err := h.List(p)
+	if err != nil {
+		return Run{}, false
+	}
+	// List is newest first.
+	for _, r := range runs {
+		if !r.StartedAt.After(at) {
+			return r, true
+		}
+	}
+	return Run{}, false
 }

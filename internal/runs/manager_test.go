@@ -112,6 +112,26 @@ func djinnProject(t *testing.T, name string) Project {
 	return Project{Name: name, Workdir: dir}
 }
 
+// djinnProjectInRepo is djinnProject in djinn's current layout: the workdir is
+// a git checkout with no legacy summoner-logs, and summoner writes its
+// lifecycle logs under <git common dir>/djinn/summoner-logs, which it returns.
+func djinnProjectInRepo(t *testing.T, name string) (Project, string) {
+	t.Helper()
+	p := djinnProject(t, name)
+	if err := os.RemoveAll(p.LegacySummonerLogDir()); err != nil {
+		t.Fatal(err)
+	}
+	gitDir := filepath.Join(p.Workdir, ".git")
+	logs := filepath.Join(gitDir, "djinn", "summoner-logs")
+	if err := os.MkdirAll(logs, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(gitDir, "HEAD"), []byte("ref: refs/heads/main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return p, logs
+}
+
 // newTestManager registers a Shutdown cleanup after its temp dirs, so it runs
 // before they are removed: a run still saving its final record would otherwise
 // race the RemoveAll. Call it after djinnProject for the same reason.

@@ -8,10 +8,10 @@ import (
 	"time"
 )
 
-// writeLifecycle drops a lifecycle log into a project's summoner-logs.
-func writeLifecycle(t *testing.T, p Project, name, body string) {
+// writeLifecycle drops a lifecycle log into a summoner-logs directory.
+func writeLifecycle(t *testing.T, dir, name, body string) {
 	t.Helper()
-	if err := os.WriteFile(filepath.Join(p.LegacySummonerLogDir(), name), []byte(body), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -53,7 +53,7 @@ func TestHistoryDetectsExternalRuns(t *testing.T) {
 	// Two clusters separated by hours — a real slice of 2026-06-16. Note the
 	// first worker ran 10m13s, longer than ExternalRunGap, so this also pins
 	// that an in-flight worker holds its run open.
-	writeLifecycle(t, p, "2026-06-16.log", `2026-06-16T00:06:28-07:00	djinn-hmmp	spawn
+	writeLifecycle(t, p.LegacySummonerLogDir(), "2026-06-16.log", `2026-06-16T00:06:28-07:00	djinn-hmmp	spawn
 2026-06-16T00:16:41-07:00	djinn-hmmp	exit	COMPLETE	closed
 2026-06-16T08:28:02-07:00	djinn-17lo	spawn
 2026-06-16T08:29:23-07:00	djinn-17lo	exit	FAILED	operator-escalation halt (loop_exhausted)
@@ -109,7 +109,7 @@ func TestHistoryDoesNotDuplicateManagedRuns(t *testing.T) {
 	}
 
 	// 08:28-07:00 is 15:28 UTC — outside the window; 07:30Z is inside.
-	writeLifecycle(t, p, "2026-06-16.log", `2026-06-16T07:30:00Z	djinn-inside	spawn
+	writeLifecycle(t, p.LegacySummonerLogDir(), "2026-06-16.log", `2026-06-16T07:30:00Z	djinn-inside	spawn
 2026-06-16T07:31:00Z	djinn-inside	exit	COMPLETE	closed
 2026-06-16T20:00:00Z	djinn-outside	spawn
 2026-06-16T20:05:00Z	djinn-outside	exit	COMPLETE	closed
@@ -148,7 +148,7 @@ func TestHistoryMarksAbandonedExternalRunsFailed(t *testing.T) {
 	p := djinnProject(t, "djinn")
 	h := NewHistory(NewStore(t.TempDir()), nil)
 
-	writeLifecycle(t, p, "2026-06-16.log", `2026-06-16T00:06:28-07:00	djinn-abandoned	spawn
+	writeLifecycle(t, p.LegacySummonerLogDir(), "2026-06-16.log", `2026-06-16T00:06:28-07:00	djinn-abandoned	spawn
 `)
 
 	runs, err := h.List(p)
@@ -176,7 +176,7 @@ func TestHistoryKeepsRecentExternalRunRunning(t *testing.T) {
 	h := NewHistory(NewStore(t.TempDir()), nil)
 
 	recent := time.Now().UTC().Add(-2 * time.Minute).Format(time.RFC3339)
-	writeLifecycle(t, p, "2026-06-16.log", recent+"\tdjinn-live\tspawn\n")
+	writeLifecycle(t, p.LegacySummonerLogDir(), "2026-06-16.log", recent+"\tdjinn-live\tspawn\n")
 
 	runs, err := h.List(p)
 	if err != nil {
@@ -196,9 +196,9 @@ func TestHistoryIgnoresNonLifecycleFiles(t *testing.T) {
 
 	// Console logs and rerun captures live in the same directory and are a
 	// different format entirely.
-	writeLifecycle(t, p, "console-2026-06-13.log", "not\ta\tlifecycle log\n")
-	writeLifecycle(t, p, "rerun-uy0d-1781850236.out", "junk\n")
-	writeLifecycle(t, p, "2026-06-16.log", "2026-06-16T00:06:28-07:00\tdjinn-a\tspawn\n")
+	writeLifecycle(t, p.LegacySummonerLogDir(), "console-2026-06-13.log", "not\ta\tlifecycle log\n")
+	writeLifecycle(t, p.LegacySummonerLogDir(), "rerun-uy0d-1781850236.out", "junk\n")
+	writeLifecycle(t, p.LegacySummonerLogDir(), "2026-06-16.log", "2026-06-16T00:06:28-07:00\tdjinn-a\tspawn\n")
 
 	runs, err := h.List(p)
 	if err != nil {
@@ -217,7 +217,7 @@ func TestHistoryCachesByModTime(t *testing.T) {
 	h := NewHistory(NewStore(t.TempDir()), nil)
 	path := filepath.Join(p.LegacySummonerLogDir(), "2026-06-16.log")
 
-	writeLifecycle(t, p, "2026-06-16.log", "2026-06-16T00:06:28-07:00\tdjinn-a\tspawn\n")
+	writeLifecycle(t, p.LegacySummonerLogDir(), "2026-06-16.log", "2026-06-16T00:06:28-07:00\tdjinn-a\tspawn\n")
 	first, err := h.events(path)
 	if err != nil {
 		t.Fatal(err)
@@ -232,7 +232,7 @@ func TestHistoryCachesByModTime(t *testing.T) {
 
 	// A changed file must be re-read. Size changes, so the cache key moves even
 	// if the filesystem's mtime resolution is coarse.
-	writeLifecycle(t, p, "2026-06-16.log",
+	writeLifecycle(t, p.LegacySummonerLogDir(), "2026-06-16.log",
 		"2026-06-16T00:06:28-07:00\tdjinn-a\tspawn\n2026-06-16T00:07:00-07:00\tdjinn-b\tspawn\n")
 	third, err := h.events(path)
 	if err != nil {
@@ -257,7 +257,7 @@ func TestHistoryGetRunDetail(t *testing.T) {
 
 	// One bead exited, one still going — the second is an active worker slot.
 	recent := time.Now().UTC().Add(-time.Minute)
-	writeLifecycle(t, p, "2026-06-16.log",
+	writeLifecycle(t, p.LegacySummonerLogDir(), "2026-06-16.log",
 		recent.Format(time.RFC3339)+"\tdjinn-done\tspawn\n"+
 			recent.Add(10*time.Second).Format(time.RFC3339)+"\tdjinn-done\texit\tCOMPLETE\tclosed\n"+
 			recent.Add(20*time.Second).Format(time.RFC3339)+"\tdjinn-busy\tspawn\n")
@@ -310,7 +310,7 @@ func TestHistoryGetReadsCurrentStepFromStateDir(t *testing.T) {
 	}
 
 	recent := time.Now().UTC().Add(-time.Minute)
-	writeLifecycle(t, p, "2026-06-16.log", recent.Format(time.RFC3339)+"\tdjinn-busy\tspawn\n")
+	writeLifecycle(t, p.LegacySummonerLogDir(), "2026-06-16.log", recent.Format(time.RFC3339)+"\tdjinn-busy\tspawn\n")
 
 	runs, err := h.List(p)
 	if err != nil {
@@ -462,7 +462,7 @@ func TestWatcherIncludesSpawnLoggedInTheStartSecond(t *testing.T) {
 		// StartedAt happened to be exactly on a second boundary; force the case.
 		spawnAt = run.StartedAt.Add(-500 * time.Millisecond).Truncate(time.Second)
 	}
-	writeLifecycle(t, p, spawnAt.UTC().Format("2006-01-02")+".log",
+	writeLifecycle(t, p.LegacySummonerLogDir(), spawnAt.UTC().Format("2006-01-02")+".log",
 		spawnAt.UTC().Format(time.RFC3339)+"\tdjinn-first\tspawn\n")
 
 	w := NewWatcher(p, m, h, hub)
@@ -506,10 +506,10 @@ func TestI4MidnightRolloverIsOneRun(t *testing.T) {
 	h := NewHistory(NewStore(t.TempDir()), nil)
 
 	// 23:40 spawn on one day, 00:12 exit on the next.
-	writeLifecycle(t, p, "2026-06-15.log",
+	writeLifecycle(t, p.LegacySummonerLogDir(), "2026-06-15.log",
 		"2026-06-15T23:40:00Z\tdjinn-night\tspawn\n"+
 			"2026-06-15T23:45:00Z\tdjinn-other\tspawn\n")
-	writeLifecycle(t, p, "2026-06-16.log",
+	writeLifecycle(t, p.LegacySummonerLogDir(), "2026-06-16.log",
 		"2026-06-16T00:12:00Z\tdjinn-night\texit\tCOMPLETE\tclosed\n"+
 			"2026-06-16T00:18:00Z\tdjinn-other\texit\tCOMPLETE\tclosed\n")
 
@@ -563,8 +563,8 @@ func TestI4AbandonedRunDoesNotSwallowLaterOnes(t *testing.T) {
 	h := NewHistory(NewStore(t.TempDir()), nil)
 
 	// A worker that never exited, then an unrelated drain three days later.
-	writeLifecycle(t, p, "2026-06-10.log", "2026-06-10T10:00:00Z\tdjinn-abandoned\tspawn\n")
-	writeLifecycle(t, p, "2026-06-13.log",
+	writeLifecycle(t, p.LegacySummonerLogDir(), "2026-06-10.log", "2026-06-10T10:00:00Z\tdjinn-abandoned\tspawn\n")
+	writeLifecycle(t, p.LegacySummonerLogDir(), "2026-06-13.log",
 		"2026-06-13T09:00:00Z\tdjinn-later\tspawn\n"+
 			"2026-06-13T09:20:00Z\tdjinn-later\texit\tCOMPLETE\tclosed\n")
 
@@ -619,9 +619,9 @@ func TestI4WatcherFoldsAcrossMidnight(t *testing.T) {
 	t.Cleanup(func() { _ = m.Stop(p.Name, run.ID) })
 
 	// Spawn in yesterday's file, exit in today's.
-	writeLifecycle(t, p, yesterday.Format("2006-01-02")+".log",
+	writeLifecycle(t, p.LegacySummonerLogDir(), yesterday.Format("2006-01-02")+".log",
 		yesterday.Format(time.RFC3339)+"\tdjinn-crossing\tspawn\n")
-	writeLifecycle(t, p, time.Now().UTC().Format("2006-01-02")+".log",
+	writeLifecycle(t, p.LegacySummonerLogDir(), time.Now().UTC().Format("2006-01-02")+".log",
 		time.Now().UTC().Format(time.RFC3339)+"\tdjinn-crossing\texit\tCOMPLETE\tclosed\n")
 
 	w := NewWatcher(p, m, h, hub)
@@ -668,7 +668,7 @@ func TestI3RunUpdatedCarriesProject(t *testing.T) {
 	t.Cleanup(func() { _ = m.Stop(p.Name, run.ID) })
 
 	spawnAt := run.StartedAt.Truncate(time.Second)
-	writeLifecycle(t, p, spawnAt.UTC().Format("2006-01-02")+".log",
+	writeLifecycle(t, p.LegacySummonerLogDir(), spawnAt.UTC().Format("2006-01-02")+".log",
 		spawnAt.UTC().Format(time.RFC3339)+"\tdjinn-a\tspawn\n")
 
 	w := NewWatcher(p, m, h, hub)
@@ -714,7 +714,7 @@ func TestN1IdleTickPreservesHistoryCache(t *testing.T) {
 	m := newTestManager(t, &recordingHub{})
 	h := NewHistory(m.Store(), m)
 
-	writeLifecycle(t, p, "2026-06-16.log", "2026-06-16T00:06:28-07:00\tdjinn-a\tspawn\n")
+	writeLifecycle(t, p.LegacySummonerLogDir(), "2026-06-16.log", "2026-06-16T00:06:28-07:00\tdjinn-a\tspawn\n")
 	path := filepath.Join(p.LegacySummonerLogDir(), "2026-06-16.log")
 	if _, err := h.events(path); err != nil {
 		t.Fatal(err)
@@ -738,5 +738,100 @@ func TestN1IdleTickPreservesHistoryCache(t *testing.T) {
 	h.mu.Unlock()
 	if cached != 1 {
 		t.Errorf("cache has %d entries after idle ticks, want the parse to survive", cached)
+	}
+}
+
+// TestHistoryListsRunsFromTheGitCommonDir: djinn now writes its lifecycle logs
+// under <git common dir>/djinn/summoner-logs. The fixture is shaped like the
+// real 2026-11-08 log, where round rows are most of the file: a round row is
+// activity that holds a long worker's run open, never a bead of its own.
+func TestHistoryListsRunsFromTheGitCommonDir(t *testing.T) {
+	p, logs := djinnProjectInRepo(t, "djinn")
+	h := NewHistory(NewStore(t.TempDir()), nil)
+
+	body := "2026-11-08T10:00:00Z\tdjinn-a\tspawn\n"
+	// Rounds every 30 minutes; the 2h40m worker outlives AbandonedGap only if
+	// its rounds count as activity.
+	for _, at := range []string{"10:30", "11:00", "11:30", "12:00", "12:30"} {
+		body += "2026-11-08T" + at + ":00Z\tdjinn-a\tround\treview-loop\titer\t1\tpass\n"
+	}
+	body += "2026-11-08T12:35:00Z\tdjinn-orphan\tround\treview-loop\titer\t2\tfail\n" +
+		"2026-11-08T12:40:00Z\tdjinn-a\texit\tCOMPLETE\tclosed\n" +
+		"2026-11-08T12:41:00Z\tdjinn-b\tspawn\n" +
+		"2026-11-08T12:45:00Z\tdjinn-b\tround\timplement\titer\t1\tspawned\n" +
+		"2026-11-08T12:50:00Z\tdjinn-b\texit\tFAILED\toperator-escalation halt\n"
+	writeLifecycle(t, logs, "2026-11-08.log", body)
+
+	runs, err := h.List(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 1 {
+		t.Fatalf("got %d runs, want 1 — round rows hold the drain together: %+v", len(runs), runs)
+	}
+	r := runs[0]
+	if r.Source != SourceExternal {
+		t.Errorf("source = %q, want external", r.Source)
+	}
+	if len(r.Beads) != 2 || r.Beads[0].ID != "djinn-a" || r.Beads[1].ID != "djinn-b" {
+		t.Fatalf("beads = %+v, want djinn-a then djinn-b and no round-only bead", r.Beads)
+	}
+	if r.Beads[0].Verdict != VerdictComplete || r.Beads[1].Verdict != VerdictFailed {
+		t.Errorf("verdicts = %q, %q", r.Beads[0].Verdict, r.Beads[1].Verdict)
+	}
+	if r.State != StateFinished {
+		t.Errorf("state = %q, want finished", r.State)
+	}
+	wantEnd := time.Date(2026, 11, 8, 12, 50, 0, 0, time.UTC)
+	if r.EndedAt == nil || !r.EndedAt.Equal(wantEnd) {
+		t.Errorf("endedAt = %v, want %v", r.EndedAt, wantEnd)
+	}
+}
+
+// TestHistoryListsRunsFromBothLayouts: a repo that drained before and after
+// djinn's move shows all of its history in one list.
+func TestHistoryListsRunsFromBothLayouts(t *testing.T) {
+	p, logs := djinnProjectInRepo(t, "djinn")
+	if err := os.MkdirAll(p.LegacySummonerLogDir(), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	h := NewHistory(NewStore(t.TempDir()), nil)
+
+	writeLifecycle(t, p.LegacySummonerLogDir(), "2026-10-20.log",
+		"2026-10-20T09:00:00Z\tdjinn-old\tspawn\n2026-10-20T09:10:00Z\tdjinn-old\texit\tCOMPLETE\tclosed\n")
+	writeLifecycle(t, logs, "2026-11-08.log",
+		"2026-11-08T09:00:00Z\tdjinn-new\tspawn\n2026-11-08T09:10:00Z\tdjinn-new\texit\tCOMPLETE\tclosed\n")
+
+	runs, err := h.List(p)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runs) != 2 {
+		t.Fatalf("got %d runs, want one from each layout: %+v", len(runs), runs)
+	}
+	if runs[0].Beads[0].ID != "djinn-new" || runs[1].Beads[0].ID != "djinn-old" {
+		t.Errorf("order = %s, %s; want djinn-new (newest) first",
+			runs[0].Beads[0].ID, runs[1].Beads[0].ID)
+	}
+}
+
+// TestBuildRunIgnoresARoundRowForAnUnseenBead: only spawn, restart and exit
+// create a bead; a round row is liveness, not membership.
+func TestBuildRunIgnoresARoundRowForAnUnseenBead(t *testing.T) {
+	at := func(m int) time.Time { return time.Date(2026, 11, 8, 10, m, 0, 0, time.UTC) }
+	run := BuildRun("ext-x", "djinn", SourceExternal, []LifecycleEvent{
+		{At: at(0), Bead: "a", Kind: KindSpawn},
+		{At: at(1), Bead: "a", Kind: KindRound, Verdict: "review-loop", Detail: "iter\t1\tpass"},
+		{At: at(2), Bead: "x", Kind: KindRound, Verdict: "review-loop", Detail: "iter\t1\tpass"},
+		{At: at(3), Bead: "a", Kind: KindExit, Verdict: VerdictComplete},
+	})
+	if len(run.Beads) != 1 || run.Beads[0].ID != "a" {
+		t.Fatalf("beads = %+v, want only a", run.Beads)
+	}
+	if run.State != StateFinished {
+		t.Errorf("state = %q, want finished", run.State)
+	}
+	if run.Beads[0].Verdict != VerdictComplete {
+		t.Errorf("verdict = %q", run.Beads[0].Verdict)
 	}
 }
