@@ -219,7 +219,7 @@ func (h *History) externalRuns(p Project, managed []Run) ([]Run, error) {
 		if len(group) == 0 || overlapsManaged(group, windows) {
 			continue
 		}
-		id := ExternalRunID(group[0].At)
+		id := ExternalRunID(p.Name, group[0].At)
 		run := BuildRun(id, p.Name, SourceExternal, group)
 		// An external run whose beads never exited is only "running" if the
 		// activity is recent; otherwise summoner died and nobody logged it.
@@ -278,13 +278,7 @@ func (h *History) Get(p Project, runID string) (*RunDetail, error) {
 	if err != nil {
 		return nil, err
 	}
-	var found *Run
-	for i := range runs {
-		if runs[i].ID == runID {
-			found = &runs[i]
-			break
-		}
-	}
+	found := findRun(runs, runID)
 	if found == nil {
 		return nil, ErrRunNotFound
 	}
@@ -327,6 +321,22 @@ func (h *History) Get(p Project, runID string) (*RunDetail, error) {
 		}
 	}
 	return detail, nil
+}
+
+// findRun is the run with id runID, or, for an id in the shape external runs
+// had before ExternalRunID named the project, the external run it denoted.
+func findRun(runs []Run, runID string) *Run {
+	for i := range runs {
+		if runs[i].ID == runID {
+			return &runs[i]
+		}
+	}
+	for i := range runs {
+		if runs[i].Source == SourceExternal && legacyExternalRunID(runs[i].StartedAt) == runID {
+			return &runs[i]
+		}
+	}
+	return nil
 }
 
 func parseConsoleFile(path string) *ConsoleParse {

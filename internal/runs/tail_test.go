@@ -80,15 +80,15 @@ func TestWatcherStreamsAnExternalLifecycleLine(t *testing.T) {
 	if len(lines) != 1 || lines[0] != exit {
 		t.Fatalf("run-log lines = %q, want exactly %q", lines, exit)
 	}
-	if ids[0] != ExternalRunID(t0) {
-		t.Errorf("runId = %q, want %q", ids[0], ExternalRunID(t0))
+	if ids[0] != ExternalRunID(p.Name, t0) {
+		t.Errorf("runId = %q, want %q", ids[0], ExternalRunID(p.Name, t0))
 	}
 	states := hub.beadStates()[beforeStates:]
 	if len(states) != 1 {
 		t.Fatalf("bead-state events = %+v, want one exit", states)
 	}
 	s := states[0]
-	if s["runId"] != ExternalRunID(t0) || s["bead"] != "djinn-a" || s["kind"] != KindExit ||
+	if s["runId"] != ExternalRunID(p.Name, t0) || s["bead"] != "djinn-a" || s["kind"] != KindExit ||
 		s["verdict"] != VerdictComplete || s["project"] != p.Name {
 		t.Errorf("bead-state = %+v", s)
 	}
@@ -295,6 +295,99 @@ func TestWatcherRereadsALogTruncatedToEmpty(t *testing.T) {
 	for i := range want {
 		if got[i] != want[i] {
 			t.Errorf("line %d = %q, want %q", i, got[i], want[i])
+		}
+	}
+}
+
+// linkedWorktreeProject registers a linked worktree of main's repository as
+// its own djinn project: its .git file points into main's common dir, so both
+// projects read the same lifecycle logs.
+func linkedWorktreeProject(t *testing.T, main Project, name string) Project {
+	t.Helper()
+	mainGit := filepath.Join(main.Workdir, ".git")
+	wtGit := filepath.Join(mainGit, "worktrees", name)
+	if err := os.MkdirAll(wtGit, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(wtGit, "commondir"), []byte("../..\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	linked := djinnProject(t, name)
+	if err := os.RemoveAll(linked.LegacySummonerLogDir()); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(linked.Workdir, ".git"), []byte("gitdir: "+wtGit+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return linked
+}
+
+// TestExternalStreamsStayApartAcrossProjects: every watcher publishes into one
+// SSE hub, and the browser appends each run-log event to the buffer for its
+// runId alone. Two projects whose drains start in the same second, and a
+// checkout registered beside its own linked worktree (both reading one
+// common-dir log), must each fill only the stream their Runs tab lists, with
+// every line exactly once.
+func TestExternalStreamsStayApartAcrossProjects(t *testing.T) {
+	alpha, alphaLogs := djinnProjectInRepo(t, "alpha")
+	beta, betaLogs := djinnProjectInRepo(t, "beta")
+	checkout, sharedLogs := djinnProjectInRepo(t, "checkout")
+	worktree := linkedWorktreeProject(t, checkout, "worktree")
+
+	hub := &recordingHub{}
+	m := newTestManager(t, hub)
+	h := NewHistory(m.Store(), m)
+
+	t0 := time.Now().UTC().Add(-time.Minute).Truncate(time.Second)
+	day := t0.Format("2006-01-02") + ".log"
+	spawn := stamp(t0) + "\tdjinn-a\tspawn\n"
+	for _, logs := range []string{alphaLogs, betaLogs, sharedLogs} {
+		appendLog(t, filepath.Join(logs, day), spawn)
+	}
+
+	projects := []Project{alpha, beta, checkout, worktree}
+	var watchers []*Watcher
+	for _, p := range projects {
+		w := NewWatcher(p, m, h, hub)
+		w.tick(t.Context())
+		watchers = append(watchers, w)
+	}
+	_, before := hub.runLogLines()
+
+	alphaLine := stamp(t0.Add(time.Second)) + "\tdjinn-alpha\tspawn"
+	betaLine := stamp(t0.Add(time.Second)) + "\tdjinn-beta\tspawn"
+	sharedLine := stamp(t0.Add(time.Second)) + "\tdjinn-shared\tspawn"
+	appendLog(t, filepath.Join(alphaLogs, day), alphaLine+"\n")
+	appendLog(t, filepath.Join(betaLogs, day), betaLine+"\n")
+	appendLog(t, filepath.Join(sharedLogs, day), sharedLine+"\n")
+	for _, w := range watchers {
+		w.tick(t.Context())
+	}
+
+	// The browser's run-log store: one buffer per runId.
+	ids, lines := hub.runLogLines()
+	buffers := map[string][]string{}
+	for i := len(before); i < len(lines); i++ {
+		buffers[ids[i]] = append(buffers[ids[i]], lines[i])
+	}
+
+	want := map[string]string{
+		alpha.Name: alphaLine, beta.Name: betaLine,
+		checkout.Name: sharedLine, worktree.Name: sharedLine,
+	}
+	listed := map[string]string{}
+	for _, p := range projects {
+		runs, err := h.List(p)
+		if err != nil || len(runs) != 1 {
+			t.Fatalf("%s: List = %+v, %v; want one external run", p.Name, runs, err)
+		}
+		id := runs[0].ID
+		if other, clash := listed[id]; clash {
+			t.Errorf("projects %s and %s list the same run id %q", other, p.Name, id)
+		}
+		listed[id] = p.Name
+		if got := buffers[id]; len(got) != 1 || got[0] != want[p.Name] {
+			t.Errorf("%s: stream %q holds %q, want exactly [%q]", p.Name, id, got, want[p.Name])
 		}
 	}
 }

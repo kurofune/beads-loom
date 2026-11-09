@@ -371,16 +371,22 @@ func TestBuildRun(t *testing.T) {
 
 func TestExternalRunIDIsStable(t *testing.T) {
 	ts := at(t, "2026-06-16T08:28:02Z")
-	a := ExternalRunID(ts)
-	b := ExternalRunID(ts)
+	a := ExternalRunID("djinn", ts)
+	b := ExternalRunID("djinn", ts)
 	if a != b {
 		t.Errorf("ids differ across calls: %q vs %q", a, b)
 	}
-	if !strings.HasPrefix(a, "ext-") {
-		t.Errorf("id = %q, want an ext- prefix", a)
+	if !strings.HasPrefix(a, "ext-20260616T082802Z-") || !ValidID(a) {
+		t.Errorf("id = %q, want a valid ext-<timestamp>-<project> id", a)
 	}
-	if c := ExternalRunID(ts.Add(time.Second)); c == a {
+	if c := ExternalRunID("djinn", ts.Add(time.Second)); c == a {
 		t.Error("different start times must yield different ids")
+	}
+	if c := ExternalRunID("loom", ts); c == a {
+		t.Error("different projects must yield different ids for the same start")
+	}
+	if c := ExternalRunID("acme/web app", ts); !ValidID(c) {
+		t.Errorf("id %q for a name with a slash and a space is not a valid id", c)
 	}
 }
 

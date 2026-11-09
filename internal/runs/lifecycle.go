@@ -3,6 +3,7 @@ package runs
 import (
 	"bufio"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"os"
 	"path/filepath"
@@ -271,14 +272,25 @@ func BuildRun(id, project string, source RunSource, events []LifecycleEvent) Run
 	return run
 }
 
-// ExternalRunID derives a stable id for a synthesized run from its first event,
-// so repeated scans of the same log produce the same id.
+// ExternalRunID derives a stable id for a synthesized run from its project and
+// first event, so repeated scans of the same log produce the same id.
 //
-// It takes no project: run ids only need to be unique within a project, and the
-// store's directory layout (runs/<project>/<runId>) already provides that
-// scoping. The parameter used to be here and was silently ignored, which
-// promised more than it delivered.
-func ExternalRunID(first time.Time) string {
+// The project is part of the id because the id is also the live stream's key:
+// every project's watcher publishes run-log into one SSE hub, and the browser
+// buffers lines by runId alone. Two projects whose drains start in the same
+// second, or a checkout registered beside its own linked worktree (both read
+// one common-dir log), would otherwise fill one buffer with each other's
+// lines. The suffix is a hash, not the name, because a project name may hold
+// characters a run id may not.
+func ExternalRunID(project string, first time.Time) string {
+	h := fnv.New32a()
+	_, _ = h.Write([]byte(project))
+	return fmt.Sprintf("%s-%08x", legacyExternalRunID(first), h.Sum32())
+}
+
+// legacyExternalRunID is the id external runs had before it named a project.
+// Citations and links written then still carry it; History.Get resolves it.
+func legacyExternalRunID(first time.Time) string {
 	return "ext-" + first.UTC().Format("20060102T150405Z")
 }
 

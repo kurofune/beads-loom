@@ -184,8 +184,9 @@ var citationIDPattern = regexp.MustCompile(`\b([a-z][a-z0-9]*)-([a-z0-9]{2,4})((
 var shaPattern = regexp.MustCompile(`\b[0-9a-f]{7,40}\b`)
 
 // runIDPattern matches both run id shapes Loom mints: run-<unixnano> for its
-// own runs (runs.NewRunID) and ext-<timestamp> for runs it synthesized from a
-// djinn lifecycle log (runs.ExternalRunID).
+// own runs (runs.NewRunID) and ext-<timestamp>-<project hash> for runs it
+// synthesized from a djinn lifecycle log (runs.ExternalRunID), plus the older
+// ext-<timestamp> form citations written before the hash still carry.
 var runIDPattern = regexp.MustCompile(`\b(?:run|ext)-[A-Za-z0-9._-]+\b`)
 
 // listItemPattern matches a markdown list item at any indent, capturing its

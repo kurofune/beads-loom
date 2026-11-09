@@ -170,14 +170,15 @@ Prose lines are not claims, even uncited ones.
 
 func TestValidateCitationsAcceptsEveryCitationShape(t *testing.T) {
 	cases := map[string]string{
-		"bead id":        "- loom-d1q.1 closed",
-		"short sha":      "- shipped in b64f334",
-		"long sha":       "- shipped in b64f334a9b5f44647528e8cfef24faa2b503b4c8",
-		"loom run id":    "- verified by run-1754270000000000000",
-		"external run":   "- verified by ext-20260804T120000Z",
-		"placeholder":    "- (none)",
-		"placeholder na": "- n/a",
-		"em dash":        "- —",
+		"bead id":         "- loom-d1q.1 closed",
+		"short sha":       "- shipped in b64f334",
+		"long sha":        "- shipped in b64f334a9b5f44647528e8cfef24faa2b503b4c8",
+		"loom run id":     "- verified by run-1754270000000000000",
+		"external run":    "- verified by ext-20260804T120000Z-1a2b3c4d",
+		"legacy external": "- verified by ext-20260804T120000Z",
+		"placeholder":     "- (none)",
+		"placeholder na":  "- n/a",
+		"em dash":         "- —",
 	}
 	for name, line := range cases {
 		if got := ValidateCitations("loom-d1q", line); len(got) != 0 {

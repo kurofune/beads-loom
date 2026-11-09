@@ -139,7 +139,12 @@ follow along while they work.
   The run watcher tails these logs by byte offset and streams each new complete line
   as a `run-log` event — under the Loom-managed run's id, or under the external
   `ext-…` run id the Runs tab lists for that instant — so a drain started at a
-  terminal streams live too.
+  terminal streams live too. An external run id is
+  `ext-<first event UTC>-<fnv32a of the project name>`: the browser buffers
+  `run-log` lines by run id alone, so the id must differ between two projects
+  whose drains start in the same second and between a checkout and its linked
+  worktree (both read one common-dir log). `History.Get` still resolves the
+  older `ext-<timestamp>` form.
 - **Console log** `console-YYYY-MM-DD.log` — ANSI-colored stream; per-step lines like
   `✅ Done [verify-impl iter 2/3] (cost: $0.8135, ctx: 6%, dur=1m26.3s)` and an
   end-of-session block:

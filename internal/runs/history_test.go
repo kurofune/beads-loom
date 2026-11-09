@@ -293,6 +293,29 @@ func TestHistoryGetRunDetail(t *testing.T) {
 	}
 }
 
+// TestHistoryGetResolvesALegacyExternalRunID: before external run ids named
+// their project they were ext-<timestamp>, and epic citations and links
+// written then still carry that form. It resolves to the run it denoted.
+func TestHistoryGetResolvesALegacyExternalRunID(t *testing.T) {
+	p := djinnProject(t, "djinn")
+	h := NewHistory(NewStore(t.TempDir()), nil)
+	start := time.Date(2026, 6, 24, 7, 42, 33, 0, time.UTC)
+	writeLifecycle(t, p.LegacySummonerLogDir(), "2026-06-24.log",
+		start.Format(time.RFC3339)+"\tdjinn-a\tspawn\n"+
+			start.Add(time.Minute).Format(time.RFC3339)+"\tdjinn-a\texit\tCOMPLETE\tclosed\n")
+
+	detail, err := h.Get(p, "ext-20260624T074233Z")
+	if err != nil {
+		t.Fatalf("Get(legacy id): %v", err)
+	}
+	if detail.ID != ExternalRunID(p.Name, start) {
+		t.Errorf("legacy id resolved to %q, want %q", detail.ID, ExternalRunID(p.Name, start))
+	}
+	if _, err := h.Get(p, "ext-20260624T074234Z"); !errors.Is(err, ErrRunNotFound) {
+		t.Errorf("Get(legacy id of no run) = %v, want ErrRunNotFound", err)
+	}
+}
+
 // TestHistoryGetReadsCurrentStepFromStateDir wires the state-dir parser into
 // the live worker slot.
 func TestHistoryGetReadsCurrentStepFromStateDir(t *testing.T) {
