@@ -20,13 +20,36 @@ say what you are changing.
 Astra and Fable", "second opinion"), or you suggest it before spending real
 money or making a design choice that is hard to undo. Never run it by reflex.
 
-## 1. Write the brief
+## 1. Fix what you already know
+
+A council run costs two models several minutes each. Do not spend it on
+problems you already know about: the models find them again and bury the new
+concerns under old ones.
+
+Before you write the brief, list every issue you already know of in the plan
+or code under consultation: an open review finding, a failing check, a problem
+you found yourself. Fix each one now, then run again the check that showed it
+(the failing test, the build, the review) and see it pass. Do not wait for the
+council to come back first.
+
+Leave an issue open only for a reason you can state: the fix needs an operator
+decision, or the fix is the very question you are asking the council. Each
+issue you leave open goes into the brief (§2) with its reason.
+
+This step starts no new search. With no known issue, go straight to the brief.
+
+**Exempt:** when the operator is discarding the current plan or implementation
+to explore fresh ideas, fix nothing in the part being replaced and do not run
+its checks again. Consult at once.
+
+## 2. Write the brief
 
 Write the brief to a temp file (e.g. `$TMPDIR/consult-brief.md`). It holds:
 
 - **Goal:** what the plan is for, in one or two sentences.
 - **Constraints:** what must stay true (DECISIONS.md rulings, budgets, deadlines, interfaces).
 - **File pointers:** `path:line` for every file the models should read. Point; do not paste.
+- **Known open issues:** one line for each known issue you left open (§1): the issue, its `path:line` or check name, and why it stays open. These are facts; the council spends no effort finding them again. Omit this bullet when no issue is open.
 - **The plan, framed as a proposal to attack:** "Here is the proposed plan. Find what is wrong with it."
 
 Never put your own conclusion, preference or confidence in the brief. A model
@@ -34,9 +57,13 @@ handed the answer tends to confirm it.
 
 When the plan is a filed bead, skip the file: `--bead <id>` uses the bead's
 title, description, acceptance criteria and design as the brief and posts each
-answer on the bead as a `djinn-consult <model>:` comment.
+answer on the bead as a `djinn-consult <model>:` comment. A fix to the plan is
+then a rewrite of those fields before you consult. Put the known open issues
+in the bead's design under a `Known open issues:` line (read the design first:
+`bd update --design` replaces the whole field), so `--bead` still carries them
+and still posts the answers.
 
-## 2. Run `djinn consult`
+## 3. Run `djinn consult`
 
 ```bash
 djinn consult --brief "$TMPDIR/consult-brief.md" --json
@@ -52,7 +79,7 @@ It prints one JSON object per model: `name`, `adapter`, `model`, `effort`,
 `reason`. An `abstain` carries why in `reason` (a failed run or an unreadable
 answer); say so in the answer rather than hiding it.
 
-## 3. Answer with the bottom line first
+## 4. Answer with the bottom line first
 
 Check every concern against the code before you rule on it: a model's claim
 is a hypothesis, not evidence. Then answer in this order, the table last.
