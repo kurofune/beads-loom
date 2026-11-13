@@ -83,7 +83,7 @@ Ask only what the ask and the repo leave open, in this order:
 
 When the ask is to move a number rather than reach a done-state, run the crucible interview (`crucible` below) instead of questions 8-10.
 
-Draft each field, run the gate, show the assembled plan for confirmation, then file it.
+Draft each field, settle every hidden-feature line with the author (Hidden features, below), run the gate, show the assembled plan for confirmation, then file it.
 
 ## Preflight — bd 1.3.0 floor
 
@@ -97,7 +97,7 @@ Read the code, docs and `DECISIONS.md` rulings the ask touches before drafting, 
 |---|---|
 | `description` | **What is wanted** — the change, in the operator's terms. **Why** — the problem it solves. **The goal beyond the goal** — what the operator is really after, so the worker can make the calls the bead does not. **Constraints** — what must stay true (a compatibility promise, a performance floor, an interface others read). **Exclusions** — what is out, named. |
 | `acceptance_criteria` | How we will know it worked: observable outcomes, one per line (Acceptance criteria, below). |
-| `design` | Binding constraints and pointers to where things live: the files, rulings and docs that bear on the work. Never a numbered step list, a prescribed order or a file-by-file plan — unless order is itself the requirement. |
+| `design` | Binding constraints and pointers to where things live: the files, rulings and docs that bear on the work. Never a numbered step list, a prescribed order or a file-by-file plan — unless order is itself the requirement. A build order the operator only suggests ("I'd start by…, then…") is not a requirement: leave it out of every field, not even marked as a leaning. |
 | `notes` | Source and context: where the ask came from (`Source: <file path> §<section>`, or the operator and the date), sibling beads, an operator go. |
 | `metadata` | `touches`, `ac_labels`, `short_name`, and `agent` or `crucible` when set — each below. Read by the harness and the ops room, not by the worker. |
 
@@ -137,6 +137,35 @@ Labels are free-form, 2-4 per bead, for filtering. Stamp **no `formula:*` label*
 > - The revenue view shows one bar per month for the last 20 months, ranked by revenue, with month and revenue labels readable at 20 bars
 > - Hovering a bar shows its month, revenue, order count and change on the year before
 > - Clicking a bar filters the orders table below to that month
+
+## Hidden features — behaviour beyond the stated change
+
+One acceptance line can carry a feature of its own. A two-step model swap gained a line requiring the drain's per-step tokens line to name model and effort; that line printed neither, so one sentence grew the bead to 40 files. A bead's size must be known at filing, so the operator decides whether an extra is worth its own bead instead of finding it in the diff.
+
+**The stated change** is what the description's **What is wanted** says (for an `ask:`, what the operator asks for). Check every acceptance line against the code at HEAD, once per node, after drafting and before the first `/ac-quality-review` pass. Flag a line only when all three tests hold:
+
+1. **The line requires a behaviour.** Verification evidence of the stated change is not a behaviour: a test that pins it, a gate or suite that passes, a run record, a regenerated doc, a `DECISIONS.md` row. New or changed product output is a behaviour, even when it reports on the stated change: a field added to a log line, a printed line, a column, a flag, an endpoint field. "The tokens line names the model" is a behaviour; "a test pins the formula's model" is not.
+2. **The stated change does not include it.** The description does not state that behaviour as wanted, and the stated change works without it. Every feature asks for something that does not exist yet: a line whose new behaviour is the stated change itself is never flagged.
+3. **The code at HEAD does not do it.** You read the code (or the repo facts the invoker gave) and it does not do it today; cite the path. A line naming behaviour that already exists at HEAD is never flagged, even when the description never mentions that surface. A line you could not check against the code stands: never flag on wording alone.
+
+For each flagged line there are exactly two ways forward: **reword** the line to the stated change, or **split** the behaviour into its own bead. There is no third way and no override; an author who wants the extra in this bead states it in the description.
+
+- **Args mode, a bead spec** — return one fenced ```json``` block and build no node:
+
+  ```json
+  {"error": "hidden_feature",
+   "findings": [{
+     "line": "<the acceptance line, verbatim>",
+     "behaviour": "<what the line requires that does not exist yet>",
+     "stated_change": "<the description's stated change, one phrase>",
+     "repo_fact": "<path[:line]> — <what the code does today>",
+     "ways_forward": {"reword": "<the line cut down to the stated change>",
+                      "split": "<title for a bead of its own>"}}]}
+  ```
+
+  One `findings` entry per flagged line; `ways_forward` holds exactly `reword` and `split`. The invoker re-sends the spec with the line reworded, or removes it and sends a second spec for the behaviour.
+- **Args mode, an `ask:`** — draft no such line. For each behaviour left out, add one line to the node's `notes`: `Left out: <behaviour> — beyond the ask's stated change; <path> <what the code does today>. File it as its own bead if it is wanted.` Return the plan as usual.
+- **Interactive mode** — before showing the assembled plan, show each flagged line to the author with its repo fact and the two choices, reword or split. A split becomes its own node in the same plan. File nothing until the author has chosen for every flagged line.
 
 ## One bead per ask — split only at a real boundary
 
@@ -191,7 +220,7 @@ A blocking edge only where one node cannot land before another: expand before ea
 
 **Who writes it.** Args mode takes an optional `ac_labels` list. Absent, the skill authors one label per criterion, in args and interactive mode alike, so every node carries the key. Author the labels from the acceptance text the gate approved, after the gate: a tightening pass rewrites lines. Passed labels keep their lines when the gate left the line count unchanged; when tightening changed the count, author the whole list again.
 
-**The authoring rule.** Each label is a noun phrase of 2 to 6 words naming the criterion's outcome — what is true when the line holds, not how it is checked — at most 32 cells, distinct within the bead. It opens on the thing the line is about (a noun), never on a verb or participle: `Narrow ruling line cut short`, not `Cut to width, never wrapped`. It contains none of `Given`, `→`, `pinned`, `verified`, a test name (a word beginning with a capital `Test`, such as `TestDetailLogDigest`), a path (no `/`) or a file:line. Good: `Header: state, id, priority, round`; `401 on expired tokens`; `Fast suite and audit green`. Not `Given a bead → the row reads x` (a sentence), not `TestDetailLogDigest passes` (how it is checked), not `ops/cockpit.go reads labels` (a path).
+**The authoring rule.** Each label is a noun phrase of 2 to 6 words naming the criterion's outcome — what is true when the line holds, not how it is checked — at most 32 cells, distinct within the bead. It opens on the thing the line is about (a noun), never on a verb or participle: `Narrow ruling line cut short`, not `Cut to width, never wrapped`. It contains none of `Given`, `→`, `pinned`, `verified`, a test name (a word beginning with a capital `Test`, such as `TestDetailLogDigest`), the word `test` or `tests` in any case (a gate line names the suite: `Fast suite and audit green`), a path (no `/`) or a file:line. Good: `Header: state, id, priority, round`; `401 on expired tokens`; `Fast suite and audit green`. Not `Given a bead → the row reads x` (a sentence), not `TestDetailLogDigest passes` (how it is checked), not `ops/cockpit.go reads labels` (a path).
 
 **Wrong length.** In args mode, an `ac_labels` list whose length differs from the non-blank acceptance line count returns a structured error naming both counts (`ac_labels has 3 labels; acceptance has 4 non-blank lines`) and builds no node: guessing which label belongs to which line would put a wrong name on a criterion. The error proposes no label and no corrected list, not even as a hint: the invoker re-sends a list of the right length, or omits `ac_labels`. In interactive mode, say both counts and author the list again.
 
@@ -205,7 +234,7 @@ A blocking edge only where one node cannot land before another: expand before ea
 
 **The authoring rule.** When the whole title fits in 28 cells, the title is the name (minus any trailing punctuation). Otherwise name what the bead is about in a noun phrase of whole words that fits: the title's leading words, cut only at a space, when they read as a phrase on their own; a fresh phrase from the title's own words when they do not. Never end on a dangling article, preposition or conjunction (`a`, `the`, `with`, `and`), never cut inside a word, never mark the cut with `…`. Good: `JWT validation middleware` for "Add JWT validation middleware" (29 cells); `Short names at filing` for "Every bead files with a short name the skill writes". Not `Every bead files with a` (dangling article), not `Every bead files with a sho` (cut inside a word), not `Every bead files with a…` (an ellipsis).
 
-**A bad passed value.** In args mode, refuse a passed `short_name` that is empty, is over 28 cells, carries `…` or trailing punctuation, or is a prefix of the title that ends inside one of the title's words (the title's next character after the prefix is a letter or digit, not a space). Return a structured error naming the value and its fault — its cell count and the 28-cell limit, or the word it cuts (`"Every bead files with a short na" cuts the title's word "name"`) — and build no node. Name every fault the value has. The error proposes no replacement name, not even as a hint: the invoker re-sends a valid name, or omits `short_name`. A value of at most 28 cells that ends at a word boundary of the title is valid even when the title's next word would not fit: carry it unchanged. In interactive mode, say what is wrong and author the name again.
+**A bad passed value.** In args mode, refuse a passed `short_name` that is empty, is over 28 cells, carries `…` or trailing punctuation, or is a prefix of the title that ends inside one of the title's words (the title's next character after the prefix is a letter or digit, not a space). Return a structured error naming the value and its fault — its cell count and the 28-cell limit, or the word it cuts (`"Every bead files with a short na" cuts the title's word "name"`) — and build no node. Before refusing on length, count the value's cells word by word, each word's apostrophe included, then add one per space: `Keep the user's draft intact` is 4 + 3 + 6 + 5 + 6 = 24, plus 4 spaces, = 28 cells, and valid. Refuse on length only a value that count puts over 28. Name every fault the value has. The error proposes no replacement name, not even as a hint: the invoker re-sends a valid name, or omits `short_name`. A value of at most 28 cells that ends at a word boundary of the title is valid even when the title's next word would not fit: carry it unchanged. In interactive mode, say what is wrong and author the name again.
 
 ## `agent` — who does the agent work
 
@@ -316,7 +345,7 @@ A lone bead is a one-node plan:
 
 ## Internal AC-quality gate — iteration budget
 
-Before filing, run `/ac-quality-review` on each node's drafted `acceptance_criteria`, passing the draft text, its `description` and its `type`. This is the only place the gate runs: the bead-work contract (§2) settles acceptance-criteria quality at filing.
+The hidden-feature check (Hidden features, above) runs first, once per node; the gate sees only a draft that passed it. Before filing, run `/ac-quality-review` on each node's drafted `acceptance_criteria`, passing the draft text, its `description` and its `type`. This is the only place the gate runs: the bead-work contract (§2) settles acceptance-criteria quality at filing.
 
 <!-- djinn-dispatch: claude-code -->
 **Invoking the gate:** run `/ac-quality-review` through the Skill tool, in this conversation.
@@ -406,7 +435,7 @@ Write each multi-line field to a file with a quoted heredoc (`<<'EOF'`) and read
 
 - **Without `--execute`**: file nothing. Return the gate-approved plan as one fenced ```json``` block, `{"nodes": [...], "edges": [...]}` — each node exactly as the Field mapping builds it (`key`, every present field, `acceptance_criteria` as the gate approved it, `metadata.touches`, `metadata.ac_labels` and `metadata.short_name` always), and an edge for every `blocked_by` id and every boundary edge. Most asks return one node and no edges besides its blockers.
 - **With `--execute`**: file the plan (Filing), run the post-filing verification, and return `{bead_ids, short_names}`.
-- **On HALT or a structured error**: one fenced ```json``` block with the error (the third pass's `findings[]`, the missing keys, or the refused value and its fault); build no node and file nothing.
+- **On HALT or a structured error**: one fenced ```json``` block with the error (the third pass's `findings[]`, the missing keys, the refused value and its fault, or a `hidden_feature` finding); build no node and file nothing.
 
 ### Interactive mode
 
@@ -430,6 +459,7 @@ Then run `bd ready --exclude-type=epic`: a node that waits on another must not b
 - **bd below 1.3.0** — stop before any filing (Preflight).
 - **Missing required key** — args mode: a structured error naming the keys; interactive mode: ask.
 - **`ac_labels` of the wrong length, a bad `short_name`, a `touches` entry that is `CONTEXT_MAP.md` or under `.djinn/seats/`** — args mode: the structured error each section names; build no node.
+- **An acceptance line requiring behaviour beyond the stated change that HEAD lacks** — args mode, a spec: the `hidden_feature` finding, no node; an `ask:`: leave the line out with a `Left out:` note; interactive mode: the author picks reword or split before the plan is shown (Hidden features).
 - **Parent epic unclear** — run `bd list --type=epic --status=open --no-parent`; ask which one owns the ask, or file a new epic node in the same plan with the bead's `parent_key` pointing at it.
 - **Existing id not found** — stop filing; ask, or return the error.
 - **`/ac-quality-review` or `bd` unavailable** — surface the error. Never file without the gate.
