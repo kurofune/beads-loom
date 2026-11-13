@@ -224,7 +224,7 @@ A blocking edge only where one node cannot land before another: expand before ea
   "steps": {"review": {"adapter": "claude-code", "model": "opus[1m]", "effort": "high"}}}}
 ```
 
-`steps` may appear without the bead-wide keys; unnamed steps then keep the formula's pins. Every selection names all three knobs. Valid values are the adapter's own: `claude-code` models `opus[1m]`, `opus`, `sonnet[1m]`, `sonnet`, `haiku`, `fable` and the full `claude-*` ids, efforts `low|medium|high|xhigh|max`; `codex` models `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna`, efforts `none|minimal|low|medium|high|xhigh|max`. A step id names an agent step of the bead's formula (default: `implement`, `fix-review`, `review`, `fix-regression`; crucible: `try`, `review`, `fix-regression`). An invalid override defers the bead `needs-operator` before any step runs.
+`steps` may appear without the bead-wide keys; unnamed steps then keep the formula's pins. Every selection names all three knobs. Valid values are the adapter's own: `claude-code` models `opus[1m]`, `opus`, `sonnet[1m]`, `sonnet`, `haiku`, `fable` and the full `claude-*` ids, efforts `low|medium|high|xhigh|max`; `codex` models `gpt-6-astra`, `gpt-6-sol`, `gpt-6-luna`, `gpt-6.1-sol`, efforts `none|minimal|low|medium|high|xhigh|max`. A step id names an agent step of the bead's formula (default: `implement`, `fix-review`, `review`, `fix-regression`; crucible: `try`, `review`, `fix-regression`). An invalid override defers the bead `needs-operator` before any step runs.
 
 ## `crucible` — a bead that moves a number
 

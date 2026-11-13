@@ -1237,9 +1237,9 @@ stopped the walk when this machine cannot honor the choice.
   same `formula describe --json` record for that step (top-level steps at
   `.steps[]`, loop-body children at `.steps[].children[]`) and **never hardcode
   them**. In the shipped default formula `review` resolves to
-  `model: "gpt-6-astra"`, `effort: "high"` even though its TOML step carries
-  no `model =` line, because the codex model is pinned once at the adapter —
-  which is exactly why the values must be read, not typed.
+  `model: "gpt-6.1-sol"`, `effort: "max"`, while a codex step with no
+  `model =` line resolves to the adapter's `gpt-6-astra` — which is exactly
+  why the values must be read, not typed.
 
   This rule covers **every** step whose resolved adapter is `codex`, not only
   review steps — **`implement` included** — and every step shape `/wish`
@@ -1479,14 +1479,15 @@ stopped the walk when this machine cannot honor the choice.
 
 The shipped pins (operator ruling 2026-09-25, guarded by
 `core/variant_formula_knobs_test.go` and
-`TestDefaultReviewModel_CrossFamilyFromImplement`): Claude builds, Astra reviews.
+`TestDefaultReviewModel_CrossFamilyFromImplement`; review's model and effort by
+the 2026-11-12 ruling): Claude builds, `gpt-6.1-sol` reviews at max.
 `design` and `revise-design` take `implement`'s knobs and `design-review`
 takes `review`'s. `design-tiebreak` runs on a judge-grade model (Step 2c's
 tiebreak table): Opus at high in the default, the one scoped exception to the
 judge-outranks-builder ruling; in each single-vendor variant the strongest
-model in it at xhigh, a notch above the reviewer, so the judge outranks both. `implement` = opus[1m] / high; `review` = codex / high with NO model line —
-the codex model is pinned once at the adapter, and it is the step the codex-exec
-rule above reads the resolved `gpt-6-astra` / `high` for, run READ-ONLY;
+model in it at xhigh, a notch above the reviewer, so the judge outranks both. `implement` = opus[1m] / high; `review` = codex / gpt-6.1-sol / max — the
+step the codex-exec rule above reads the resolved model and effort for, run
+READ-ONLY;
 `fix-review` and `fix-regression` = opus[1m] / high, because a fixer edits code a
 judge just condemned. Every single-agent step declares its adapter and `effort`.
 
