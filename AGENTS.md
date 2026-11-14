@@ -228,8 +228,8 @@ fresh one.
 ## Escalate
 
 A drain has ended when its state file carries `finished_at`. Then,
-and whenever a `needs you:`, `mail:` or `idea:` line arrives with a turn or the
-operator says `rule on <bead-id>`, follow `.djinn/lead/escalate.md`.
+and whenever a `needs you:`, `mail:`, `idea:` or `lead fix:` line arrives with a
+turn or the operator says `rule on <bead-id>`, follow `.djinn/lead/escalate.md`.
 
 **Decide the obvious; ask only what only the operator can answer.** A decision
 goes to the operator only when it is

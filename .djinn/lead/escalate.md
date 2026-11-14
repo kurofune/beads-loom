@@ -335,6 +335,24 @@ bd update <idea-id> --add-label=declined
 bd close <idea-id> --reason "declined: <the operator's words>"
 ```
 
+### A `lead fix:` line arrives with a turn
+
+The UserPromptSubmit hook also adds
+`lead fix: <message-id> — <title> — bd show <message-id>` for lead mail
+labelled `lead-fix`: a fix with an undo that the summoner or the workshop tick
+could not make itself, such as reinstalling djinn from main's tip. The tick
+also wakes the lead seat's mail duty for it, which runs the fix once, marks the
+mail `lead-fix-tried` and leaves it open; its filer closes it once the fault is
+gone. So a `lead fix:` line still open after that is a fix that failed or never
+ran. It is yours, never the operator's: put no question to them and defer
+nothing. Read it with its `bd show` pointer, do the fix it names (a reinstall
+only once `djinn drain alive` prints `not-running`), close it with
+`bd close <message-id> --reason "<what you did>"`, then report in one `say` line:
+
+```say
+<message title>: done — <what you ran>. The next drain starts as usual.
+```
+
 ### A `triage:operator` bead — triage sent it to you
 
 A proposed plan reaches you this way by one of two roads. Triage decides every
