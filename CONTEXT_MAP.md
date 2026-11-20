@@ -22,7 +22,6 @@ Pointers only. The source file always beats this map.
 | Wire contract (TS side) | `web/src/api/types.ts` |
 | Live-database test rule | `AGENTS.md` §Testing |
 | Why the timeline reads `events`, not `dolt_diff_issues` | `docs/spikes/dolt-diff.md` |
-| Per-bead work contract (djinn) | `AGENTS.md` §Per-Bead Work Contract |
 | Task state, memories | `bd` (Dolt DB) — `bd list`, `bd memories` |
 
 ## Code

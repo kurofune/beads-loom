@@ -2,7 +2,7 @@
 
 **Mode:** post-launch.
 **Goal:** keep Loom working for any beads user: public CI green, review follow-ups worked down.
-**Last change:** loom-wzf landed: the Runs tab reads djinn's drain logs from the git common dir (and the old `.djinn/` dir) and streams new lifecycle lines live.
+**Last change:** loom-fxfo: the djinn harness files left the repo (AGENTS.md block, `.djinn/` seats and lead files, generated skills and agents, the needs-you hook); `docs/SCARS.md` holds the UI scars.
 
 ## State
 
@@ -26,7 +26,7 @@
 ## Assumptions
 
 - The summoner contract `internal/runs/` reads stays. djinn now writes its drain logs under `<git common dir>/djinn/`; Loom reads both places.
-- The public repo carries the harness; djinn's footprint shrinks later through `djinn init` (a design note for the djinn session is written; not yet handed over).
+- The repo carries no djinn harness (removed 2026-11-20 while djinn is rebuilt; it returns fresh through `djinn init`). The djinn integration is product code and stays.
 
 ## Open questions
 
